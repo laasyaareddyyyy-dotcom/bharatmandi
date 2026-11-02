@@ -1,0 +1,748 @@
+@import "tailwindcss";
+
+/* =========================================================================
+   DESIGN TOKENS & COLOR PALETTE: OPTION A - EXECUTIVE NAVY (CLASSIC & PROFESSIONAL)
+   --primary:      #1a3a52 (Deep Navy - Authority, trust, timeless ledger styling)
+   --primary-dark: #122839 (Midnight Navy - Hover & focus states)
+   --primary-light:#eef3f7 (Navy Mist - Soft highlight containers & badge backgrounds)
+   --secondary:    #d4af37 (Classic Gold - Action CTAs, accents, premium branding)
+   --secondary-subtle: #fdfaf0 (Warm Gold Pearl - Accent cards & badges)
+   --accent:       #f5f1de (Classic Cream - Subtle contrast panels)
+   --neutral:      #6b7280 (Soft Slate Gray - Subtitles, helper text)
+   --bg:           #faf9f6 (Warm Off-White - Low eye-strain canvas)
+   --charcoal:     #1e293b (Slate Charcoal - High contrast body text)
+   --border:       #e2e8f0 (Neutral Slate Border - Crisp, clean grid dividers)
+   ========================================================================= */
+
+@layer base {
+  :root {
+    /* Executive Navy Palette Tokens */
+    --color-primary: #1a3a52;
+    --color-primary-dark: #122839;
+    --color-primary-light: #eef3f7;
+    --color-secondary: #d4af37;
+    --color-secondary-subtle: #fdfaf0;
+    --color-accent: #f5f1de;
+    --color-neutral: #6b7280;
+    --color-bg: #faf9f6;
+    --color-card: #ffffff;
+    --color-charcoal: #1e293b;
+    --color-border: #e2e8f0;
+
+    /* Legacy semantic compatibility variables mapped to Executive Navy */
+    --mandi-emerald: #1a3a52;
+    --mandi-emerald-dark: #122839;
+    --mandi-emerald-light: #eef3f7;
+    --mandi-danger: #ef4444;
+    --mandi-danger-light: #fee2e2;
+    --mandi-gold: #d4af37;
+    --mandi-gold-light: #fdfaf0;
+    --mandi-bg: #faf9f6;
+    --mandi-card: #ffffff;
+    --mandi-charcoal: #1e293b;
+    --mandi-muted: #6b7280;
+    --mandi-border: #e2e8f0;
+
+    /* Safe Area Inset Variables for notch, Dynamic Island, and home bar */
+    --sat: env(safe-area-inset-top, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+
+    /* Master Prompt Tokens */
+    --primary: #1a3a52;
+    --primary-dark: #122839;
+    --secondary: #d4af37;
+    --accent: #f5f1de;
+    --neutral: #6b7280;
+    --white: #ffffff;
+    --lighter: #ffffff;
+    --error: #ef4444;
+    --success: #10b981;
+    --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.08);
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    /* Prevent unwanted mobile bounce/stretching while preserving natural scrolling */
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+    scroll-behavior: smooth;
+    max-width: 100vw;
+    width: 100%;
+    overflow-x: hidden;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-charcoal);
+    font-family: 'Plus Jakarta Sans', 'Noto Sans Telugu', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    padding-top: var(--sat);
+    padding-left: var(--sal);
+    padding-right: var(--sar);
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
+    max-width: 100vw;
+    width: 100%;
+    overflow-x: hidden;
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #D5C8BD;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #B6A293;
+}
+
+/* Touch-Friendly & Hardware Accelerated Utilities */
+.touch-manipulation {
+  touch-action: manipulation;
+}
+
+.tap-highlight-transparent {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.safe-bottom-padding {
+  padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
+}
+
+.safe-top-padding {
+  padding-top: max(8px, env(safe-area-inset-top, 8px));
+}
+
+/* =========================================================================
+   RESPONSIVE DESIGN BREAKPOINTS SYSTEM
+   Master implementation for Android phones, iPhones, Tablets, Laptops & 4K
+   ========================================================================= */
+
+/* 1. EXTRA SMALL PHONES & NARROW SCREENS (320px - 374px, e.g., iPhone SE, Galaxy A01) */
+@media (max-width: 374px) {
+  .responsive-title-h1 {
+    font-size: 16px !important;
+    line-height: 1.25 !important;
+  }
+  .responsive-title-h2 {
+    font-size: 14px !important;
+  }
+  .responsive-body {
+    font-size: 13px !important;
+  }
+  .responsive-card-pad {
+    padding: 10px !important;
+  }
+  .responsive-grid-1col {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* 2. STANDARD IPHONES & ANDROID PHONES (375px - 479px, e.g., iPhone 12/13/14/15, Galaxy S21) */
+@media (min-width: 375px) and (max-width: 479px) {
+  .responsive-title-h1 {
+    font-size: 18px;
+    line-height: 1.3;
+  }
+  .responsive-title-h2 {
+    font-size: 16px;
+  }
+  .responsive-body {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .responsive-card-pad {
+    padding: 12px;
+  }
+}
+
+/* 3. LARGE PHONES & SMALL PHABLETS (480px - 599px, e.g., iPhone Pro Max, Galaxy Ultra) */
+@media (min-width: 480px) and (max-width: 599px) {
+  .responsive-title-h1 {
+    font-size: 19px;
+  }
+  .responsive-title-h2 {
+    font-size: 17px;
+  }
+  .responsive-body {
+    font-size: 14.5px;
+  }
+  .responsive-card-pad {
+    padding: 14px;
+  }
+}
+
+/* 4. SMALL TABLETS & FOLDABLES (600px - 767px, e.g., iPad Mini, Galaxy Fold) */
+@media (min-width: 600px) and (max-width: 767px) {
+  .responsive-title-h1 {
+    font-size: 20px;
+  }
+  .responsive-title-h2 {
+    font-size: 18px;
+  }
+  .responsive-body {
+    font-size: 15px;
+  }
+  .responsive-card-pad {
+    padding: 16px;
+  }
+}
+
+/* 5. STANDARD TABLETS (768px - 1023px, e.g., iPad Air, iPad 10.2", Galaxy Tab S7) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .responsive-title-h1 {
+    font-size: 22px;
+  }
+  .responsive-title-h2 {
+    font-size: 19px;
+  }
+  .responsive-body {
+    font-size: 15.5px;
+  }
+  .responsive-card-pad {
+    padding: 18px;
+  }
+}
+
+/* 6. LARGE TABLETS & LAPTOPS (1024px - 1199px, e.g., iPad Pro 11"/12.9", MacBook Air) */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  .responsive-title-h1 {
+    font-size: 24px;
+  }
+  .responsive-title-h2 {
+    font-size: 20px;
+  }
+  .responsive-body {
+    font-size: 16px;
+  }
+  .responsive-card-pad {
+    padding: 20px;
+  }
+}
+
+/* 7. DESKTOPS & HIGH-RES LAPTOPS (1200px - 1439px, e.g., MacBook Pro 14"/16", 1080p Displays) */
+@media (min-width: 1200px) and (max-width: 1439px) {
+  .responsive-title-h1 {
+    font-size: 26px;
+  }
+  .responsive-title-h2 {
+    font-size: 22px;
+  }
+  .responsive-body {
+    font-size: 16px;
+  }
+  .responsive-card-pad {
+    padding: 22px;
+  }
+}
+
+/* 8. LARGE DESKTOP MONITORS (1440px - 1919px, e.g., 27" QHD Displays, iMac) */
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .responsive-title-h1 {
+    font-size: 28px;
+  }
+  .responsive-title-h2 {
+    font-size: 24px;
+  }
+  .responsive-body {
+    font-size: 17px;
+  }
+  .responsive-card-pad {
+    padding: 24px;
+  }
+}
+
+/* 9. FULL HD & 2K MONITORS (1920px - 2559px) */
+@media (min-width: 1920px) and (max-width: 2559px) {
+  .responsive-title-h1 {
+    font-size: 30px;
+  }
+  .responsive-title-h2 {
+    font-size: 25px;
+  }
+  .responsive-body {
+    font-size: 17.5px;
+  }
+  .responsive-card-pad {
+    padding: 26px;
+  }
+}
+
+/* 10. 4K MONITORS & ULTRA-WIDE (2560px - 3840px+) */
+@media (min-width: 2560px) {
+  .responsive-title-h1 {
+    font-size: 32px;
+  }
+  .responsive-title-h2 {
+    font-size: 26px;
+  }
+  .responsive-body {
+    font-size: 18px;
+  }
+  .responsive-card-pad {
+    padding: 30px;
+  }
+}
+
+/* =========================================================================
+   ORIENTATION SPECIFIC OPTIMIZATIONS
+   ========================================================================= */
+
+/* Mobile in Landscape Mode (Width > Height but screen is phone size) */
+@media screen and (orientation: landscape) and (max-height: 500px) {
+  .landscape-condensed-header {
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+  }
+  .landscape-grid-2col {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .landscape-hide {
+    display: none !important;
+  }
+}
+
+/* Portrait Mobile View */
+@media screen and (orientation: portrait) and (max-width: 640px) {
+  .portrait-full-width {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
+/* =========================================================================
+   TOUCH TARGET ACCESSIBILITY (MINIMUM 44px - 48px)
+   ========================================================================= */
+.min-touch-target {
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.min-touch-target-android {
+  min-height: 48px;
+  min-width: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Dedicated Print Styles for Mandi Ledger PDF & Thermal Receipt */
+@media print {
+  body {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    font-size: 11pt !important;
+  }
+
+  .no-print,
+  nav,
+  header,
+  aside,
+  button:not(.print-include),
+  .no-print-area {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-page-break {
+    page-break-after: always;
+  }
+
+  .print-no-break {
+    page-break-inside: avoid;
+  }
+
+  /* Thermal Receipt Specific Print Settings */
+  .thermal-receipt-print {
+    width: 78mm !important;
+    max-width: 78mm !important;
+    margin: 0 auto !important;
+    padding: 2mm !important;
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 9.5pt !important;
+    line-height: 1.3 !important;
+    color: #000 !important;
+    background: #fff !important;
+  }
+
+  /* Formal A4 Mandi Ledger Sheet (Form C) Print Settings */
+  @page {
+    size: landscape;
+    margin: 8mm 6mm;
+  }
+
+  .a4-ledger-print {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    color: #000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+
+  .a4-ledger-print .overflow-x-auto {
+    overflow: visible !important;
+    width: 100% !important;
+  }
+
+  .party-details-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+    page-break-inside: avoid !important;
+  }
+
+  .party-box {
+    border: 1px solid #777 !important;
+    background-color: #faf8f5 !important;
+    padding: 8px 10px !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .font-c-ledger-table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    font-size: 8pt !important;
+    line-height: 1.25 !important;
+    table-layout: auto !important;
+  }
+
+  .font-c-ledger-table th,
+  .font-c-ledger-table td {
+    border: 1px solid #666 !important;
+    padding: 4px 5px !important;
+    box-sizing: border-box !important;
+  }
+
+  .font-c-ledger-table th {
+    background-color: #ece8e3 !important;
+    color: #1a1412 !important;
+    font-size: 8pt !important;
+    font-weight: 800 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .font-c-ledger-table .col-variety {
+    min-width: 135px !important;
+    width: 19% !important;
+    white-space: normal !important;
+    word-break: keep-all !important;
+    overflow-wrap: normal !important;
+    hyphens: none !important;
+  }
+
+  .font-c-ledger-table tr {
+    page-break-inside: avoid !important;
+  }
+
+  .font-c-ledger-table tfoot {
+    page-break-inside: avoid !important;
+  }
+
+  .font-c-ledger-table tfoot td {
+    background-color: #f5f2ee !important;
+    font-weight: 800 !important;
+    border-top: 2px solid #333 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* =========================================================================
+   UNIVERSAL MODAL & DIALOG ARCHITECTURE TOKENS
+   - Perfectly centered (horizontally & vertically)
+   - Soft, subtle drop shadows (no harsh divider lines)
+   - Responsive bounds with overflow protection
+   ========================================================================= */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  margin: 0;
+  overflow: hidden;
+}
+
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.16);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  margin: auto;
+}
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* Date input safe sizing */
+input[type="date"] {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* =========================================================================
+   SUPPORT & SERVICES PAGE LAYOUT (MASTER PROMPT REFINEMENT)
+   ========================================================================= */
+
+/* ===== PAGE HEADER ===== */
+.page-header {
+  margin-bottom: 24px;
+}
+
+.page-header h1 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.page-header p {
+  font-size: 13px;
+  color: var(--neutral);
+}
+
+/* ===== SUPPORT GRID ===== */
+.support-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .support-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.support-card {
+  background: var(--lighter);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 136px;
+}
+
+.support-card:hover {
+  border-color: var(--secondary);
+  background: #fdfcf9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px -2px rgba(26, 58, 82, 0.08);
+}
+
+.support-icon {
+  font-size: 38px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.support-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  line-height: 1.3;
+}
+
+.support-desc {
+  font-size: 12px;
+  color: var(--neutral);
+  line-height: 1.4;
+}
+
+/* ===== INFO / RULES GRID ===== */
+.info-section {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .info-section {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.info-card {
+  background: var(--lighter);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.info-card:hover {
+  border-color: var(--secondary);
+  background: #fdfcf9;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px -2px rgba(26, 58, 82, 0.08);
+}
+
+.info-icon {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.info-card h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 2px;
+}
+
+.info-card p {
+  font-size: 12px;
+  color: var(--neutral);
+  margin: 0;
+}
+
+/* ===== LANGUAGE SECTION ===== */
+.language-section {
+  margin-bottom: 24px;
+  padding: 18px;
+  background: var(--lighter);
+  border-radius: 12px;
+  border: 1.5px solid #e2e8f0;
+}
+
+.language-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+@media (max-width: 480px) {
+  .language-selector {
+    grid-template-columns: 1fr;
+  }
+}
+
+.lang-btn {
+  padding: 12px 14px;
+  background: var(--white);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lang-btn:hover {
+  border-color: var(--primary);
+  background: #f8fafc;
+}
+
+.lang-btn.active {
+  background: var(--primary);
+  color: #ffffff;
+  border-color: var(--primary);
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(26, 58, 82, 0.15);
+}
+
+/* ===== LOGOUT BUTTON ===== */
+.btn-logout {
+  width: 100%;
+  padding: 14px 18px;
+  background: var(--white);
+  color: var(--primary);
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.btn-logout:hover {
+  border-color: var(--primary);
+  background: #eef3f7;
+  color: #122839;
+  box-shadow: 0 2px 8px rgba(26, 58, 82, 0.08);
+}
+
+.btn-logout:active {
+  transform: scale(0.99);
+}
+
+/* ===== SMOOTH CONTENT AREA TRANSITION ===== */
+.content-area {
+  scroll-behavior: smooth;
+  transition: opacity 0.2s ease;
+}
+
+

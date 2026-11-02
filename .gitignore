@@ -1,0 +1,29 @@
+*.iml
+.gradle
+/local.properties
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+local.properties
+node_modules
+dist
+
+# Environment variables & secrets (Never commit secrets to GitHub)
+.env
+.env.*
+.env.examples
+!.env.example
+
+# Backups and local migration logs
+*_backup.json
+*_log.json
+firestore_backup.json
+merchant_migration_log.json

@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isValidId(id) {
+      return id != null && id is string && id.size() > 0 && id.size() <= 128;
+    }
+
+    // Allow registered accounts checking & creation directly via Firebase Client SDK
+    match /registeredAccounts/{docId} {
+      allow read, write: if true;
+    }
+
+    // Allow merchant data sync directly via Firebase Client SDK
+    match /merchants/{merchantId}/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Allow global support tickets for admin portal
+    match /supportTickets/{document=**} {
+      allow read, write: if true;
+    }
+
+    match /test/{document=**} {
+      allow read, write: if true;
+    }
+
+    // Default deny for all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

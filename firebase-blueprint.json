@@ -1,0 +1,147 @@
+{
+  "entities": {
+    "MerchantProfile": {
+      "title": "MerchantProfile",
+      "description": "Mandi Merchant Shop details and charge settings",
+      "type": "object",
+      "properties": {
+        "shopName": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "photoUrl": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "shopNumber": { "type": "string" },
+        "marketYardName": { "type": "string" },
+        "merchantId": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "licenseNumber": { "type": "string" },
+        "defaultCommissionRate": { "type": "number" },
+        "address": { "type": "string" }
+      },
+      "required": ["shopName", "phoneNumber", "merchantId"]
+    },
+    "Farmer": {
+      "title": "Farmer",
+      "description": "Farmer profile linked to merchant",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "village": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "village"]
+    },
+    "SaleLot": {
+      "title": "SaleLot",
+      "description": "Mandi sale transaction or lot record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "parchiNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "flowerVariety": { "type": "string" },
+        "quantity": { "type": "number" },
+        "unit": { "type": "string" },
+        "rate": { "type": "number" },
+        "grossTotal": { "type": "number" },
+        "farmerNetPayable": { "type": "number" },
+        "paymentStatus": { "type": "string" },
+        "amountPaid": { "type": "number" },
+        "balanceDue": { "type": "number" }
+      },
+      "required": ["id", "parchiNumber", "farmerId", "farmerName", "grossTotal"]
+    },
+    "Shipment": {
+      "title": "Shipment",
+      "description": "Consolidated shipment record",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "shipmentNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "grossTotal": { "type": "number" },
+        "netAmountAfterDailyCuts": { "type": "number" },
+        "paymentStatus": { "type": "string" }
+      },
+      "required": ["id", "shipmentNumber", "farmerId", "grossTotal"]
+    },
+    "PaymentRecord": {
+      "title": "PaymentRecord",
+      "description": "Payment transaction history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "date": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "amount": { "type": "number" },
+        "paymentMode": { "type": "string" }
+      },
+      "required": ["id", "farmerId", "amount", "paymentMode"]
+    },
+    "FifteenDaySettlement": {
+      "title": "FifteenDaySettlement",
+      "description": "Periodic settlement statement",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "settlementNumber": { "type": "string" },
+        "farmerId": { "type": "string" },
+        "farmerName": { "type": "string" },
+        "finalPayment": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "settlementNumber", "farmerId", "finalPayment"]
+    },
+    "RegisteredAccount": {
+      "title": "RegisteredAccount",
+      "description": "User account credentials and shop metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "role": { "type": "string" },
+        "fullName": { "type": "string" },
+        "pinHash": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "phoneNumber", "role", "fullName"]
+    }
+  },
+  "firestore": {
+    "/merchants/{merchantId}": {
+      "schema": "MerchantProfile",
+      "description": "Merchant profile document"
+    },
+    "/merchants/{merchantId}/farmers/{farmerId}": {
+      "schema": "Farmer",
+      "description": "Farmers belonging to merchant"
+    },
+    "/merchants/{merchantId}/lots/{lotId}": {
+      "schema": "SaleLot",
+      "description": "Sale lots belonging to merchant"
+    },
+    "/merchants/{merchantId}/shipments/{shipmentId}": {
+      "schema": "Shipment",
+      "description": "Consolidated shipments belonging to merchant"
+    },
+    "/merchants/{merchantId}/payments/{paymentId}": {
+      "schema": "PaymentRecord",
+      "description": "Payment records belonging to merchant"
+    },
+    "/merchants/{merchantId}/settlements/{settlementId}": {
+      "schema": "FifteenDaySettlement",
+      "description": "Settlements belonging to merchant"
+    },
+    "/registeredAccounts/{accountId}": {
+      "schema": "RegisteredAccount",
+      "description": "Registered user accounts for login and PIN verification"
+    }
+  }
+}

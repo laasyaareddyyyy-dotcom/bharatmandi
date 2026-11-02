@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.vercel.flower_market_three.twa",
+      "sha256_cert_fingerprints": [
+        "01:A5:EE:18:D3:BC:00:5A:C3:43:BB:0C:EE:E3:05:40:50:FC:23:A4:59:FA:73:57:2E:8E:15:AF:D0:33:50:3F"
+      ]
+    }
+  }
+]
