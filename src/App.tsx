@@ -59,6 +59,7 @@ const MainLayout: React.FC = () => {
     setIsOwnerSignUpOpen,
     isFarmerSignUpOpen,
     setIsFarmerSignUpOpen,
+    setActiveFarmerId,
     isGeneratePdfOpen,
     setIsGeneratePdfOpen,
     activePdfLot,
@@ -68,67 +69,6 @@ const MainLayout: React.FC = () => {
     language,
     t,
   } = useMandi();
-
-  const [showSplash, setShowSplash] = React.useState<boolean>(() => {
-    try {
-      const activePhone = localStorage.getItem('bharatmandi_active_user_phone') || localStorage.getItem('phoolmitra_active_phone_v1') || localStorage.getItem('bharatmandi_active_phone_v1');
-      const onboardingCompleted = localStorage.getItem('bharatmandi_onboarding_completed');
-      if (activePhone && onboardingCompleted !== 'false') {
-        return false;
-      }
-    } catch {}
-    return true;
-  });
-
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState<boolean>(() => {
-    try {
-      const activePhone = localStorage.getItem('bharatmandi_active_user_phone') || localStorage.getItem('phoolmitra_active_phone_v1') || localStorage.getItem('bharatmandi_active_phone_v1');
-      const onboardingCompleted = localStorage.getItem('bharatmandi_onboarding_completed');
-      if (onboardingCompleted === 'false' || !activePhone) {
-        return false;
-      }
-      return true;
-    } catch {
-      return false;
-    }
-  });
-
-  // Keep onboarding/logged-in status in sync if user logs in, switches accounts, or logs out
-  React.useEffect(() => {
-    if (currentUserPhone) {
-      setHasCompletedOnboarding(true);
-      setShowSplash(false);
-    } else {
-      try {
-        const activePhone = localStorage.getItem('bharatmandi_active_user_phone') || localStorage.getItem('phoolmitra_active_phone_v1') || localStorage.getItem('bharatmandi_active_phone_v1');
-        const onboardingCompleted = localStorage.getItem('bharatmandi_onboarding_completed');
-        if (!activePhone || onboardingCompleted === 'false') {
-          setHasCompletedOnboarding(false);
-        }
-      } catch {
-        setHasCompletedOnboarding(false);
-      }
-    }
-  }, [currentUserPhone]);
-
-  const handleSplashFinish = React.useCallback(() => {
-    setShowSplash(false);
-  }, []);
-
-  if (showSplash) {
-    return <SplashScreen onFinish={handleSplashFinish} holdDurationMs={0} />;
-  }
-
-  if (!hasCompletedOnboarding && !currentUserPhone) {
-    return (
-      <OnboardingAuthScreen
-        onComplete={() => {
-          setHasCompletedOnboarding(true);
-          setShowSplash(false);
-        }}
-      />
-    );
-  }
 
   if (portalMode === 'admin') {
     return (
@@ -229,13 +169,13 @@ const MainLayout: React.FC = () => {
         <SettingsModal />
         <DateSwitcherModal />
         <ParchiAuditTrailModal />
-        <OwnerSignUpModal
-          isOpen={isOwnerSignUpOpen}
-          onClose={() => setIsOwnerSignUpOpen(false)}
-        />
         <FarmerSignUpModal
           isOpen={isFarmerSignUpOpen}
           onClose={() => setIsFarmerSignUpOpen(false)}
+          onSuccess={(newFarmer) => {
+            setActiveFarmerId(newFarmer.id);
+            setMerchantTab('new-sale');
+          }}
         />
         <HelpDeskModal />
       </Suspense>

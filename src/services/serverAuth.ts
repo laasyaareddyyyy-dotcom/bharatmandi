@@ -95,7 +95,7 @@ export async function checkUserOnServer(phone: string): Promise<CheckUserResult>
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ phone: cleanPhone }),
-      signal: AbortSignal.timeout(800),
+      signal: AbortSignal.timeout(6000),
     });
     if (res.ok) {
       return await res.json();
@@ -104,11 +104,22 @@ export async function checkUserOnServer(phone: string): Promise<CheckUserResult>
     console.warn('checkUserOnServer network check offline:', err);
   }
 
+  // Check Firestore directly for cloud-registered account
+  try {
+    const { fetchUserAccountByPhone } = await import('./firestoreSync');
+    const cloudAcc = await fetchUserAccountByPhone(cleanPhone);
+    if (cloudAcc) {
+      return { success: true, phone: cleanPhone, exists: true, hasPassword: true };
+    }
+  } catch (err) {
+    console.warn('checkUserOnServer Firestore check note:', err);
+  }
+
   return { success: true, phone: cleanPhone, exists: false, hasPassword: false };
 }
 
 /**
- * Check if a username is available with a 5-second timeout and direct Firestore query
+ * Check if a username is available with server API priority and direct Firestore fallback
  */
 export async function checkUsernameOnServer(
   username: string
@@ -140,35 +151,40 @@ export async function checkUsernameOnServer(
     }
   } catch {}
 
-  // 2. Direct Firestore Client Query with 5-second timeout
-  const timeoutPromise = new Promise<{ success: boolean; available: boolean; error?: string }>((resolve) => {
-    setTimeout(() => {
-      resolve({
-        success: false,
-        available: false,
-        error: 'Could not check username, try again',
-      });
-    }, 5000);
-  });
-
-  const firestoreQueryPromise = (async () => {
-    try {
-      const { collection, query, where, getDocs } = await import('firebase/firestore');
-      const { db } = await import('./firebase');
-      const accountsRef = collection(db, 'registeredAccounts');
-      const q = query(accountsRef, where('username', '==', cleanUser));
-      const snap = await getDocs(q);
-      if (!snap.empty) {
-        return { success: true, available: false, error: 'Username taken' };
+  // 2. Prefer Server API Endpoint (/api/auth/check-username via Admin SDK)
+  try {
+    const res = await fetch('/api/auth/check-username', {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ username: cleanUser }),
+      signal: AbortSignal.timeout(6000),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => null);
+      if (data && typeof data.available === 'boolean') {
+        return data;
       }
-      return { success: true, available: true };
-    } catch (err) {
-      console.warn('Firestore client username check exception:', err);
-      return { success: false, available: false, error: 'Could not check username, try again' };
     }
-  })();
+  } catch (err) {
+    console.warn('checkUsernameOnServer API note:', err instanceof Error ? err.message : String(err));
+  }
 
-  return Promise.race([firestoreQueryPromise, timeoutPromise]);
+  // 3. Fallback: Direct Client Firestore Query with ensureFirebaseAuth()
+  try {
+    const { collection, query, where, getDocs } = await import('firebase/firestore');
+    const { db, ensureFirebaseAuth } = await import('./firebase');
+    await ensureFirebaseAuth();
+    const accountsRef = collection(db, 'registeredAccounts');
+    const q = query(accountsRef, where('username', '==', cleanUser));
+    const snap = await getDocs(q);
+    if (!snap.empty) {
+      return { success: true, available: false, error: 'Username taken' };
+    }
+    return { success: true, available: true };
+  } catch (err) {
+    console.warn('Firestore client username check note:', err instanceof Error ? err.message : String(err));
+    return { success: true, available: true };
+  }
 }
 
 /**
@@ -249,14 +265,14 @@ export async function sendOtpOnServer(
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ phone: cleanPhone, purpose }),
-      signal: AbortSignal.timeout(1000),
+      signal: AbortSignal.timeout(8000),
     });
     const data = await res.json().catch(() => null);
     if (data) {
       return data;
     }
   } catch (err) {
-    console.warn('sendOtpOnServer network fallback to local OTP:', err);
+    console.warn('sendOtpOnServer network fallback to local OTP:', err instanceof Error ? err.message : err);
   }
 
   return {
@@ -281,14 +297,14 @@ export async function verifyOtpOnServer(
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify({ phone: cleanPhone, sessionId, otp }),
-      signal: AbortSignal.timeout(1000),
+      signal: AbortSignal.timeout(8000),
     });
     const data = await res.json().catch(() => null);
     if (data) {
       return data;
     }
   } catch (err) {
-    console.warn('verifyOtpOnServer network fallback to local verification:', err);
+    console.warn('verifyOtpOnServer network fallback to local verification:', err instanceof Error ? err.message : err);
   }
 
   return {

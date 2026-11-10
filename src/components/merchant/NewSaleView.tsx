@@ -105,6 +105,8 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
     updateStockItem,
     getFarmerStats,
     setIsOwnerSignUpOpen,
+    activeFarmerId,
+    setActiveFarmerId,
   } = useMandi();
 
   const activeMode = mode || merchantSection || 'wholesaler';
@@ -120,14 +122,21 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
   // Ref for farmer section scrolling
   const farmerSectionRef = useRef<HTMLDivElement>(null);
 
-  // Wholesaler Farmer Selection State (Starts empty on every new entry)
-  const [selectedFarmerId, setSelectedFarmerId] = useState<string>('');
+  // Wholesaler Farmer Selection State
+  const [selectedFarmerId, setSelectedFarmerId] = useState<string>(activeFarmerId || '');
   const [farmerSearch, setFarmerSearch] = useState<string>('');
   const [isFarmerDropdownOpen, setIsFarmerDropdownOpen] = useState(false);
   const [showInlineAddFarmer, setShowInlineAddFarmer] = useState(false);
   const [isFarmerModalOpen, setIsFarmerModalOpen] = useState(false);
   const [farmerFieldError, setFarmerFieldError] = useState<string | null>(null);
   const [isChangeFarmerConfirmOpen, setIsChangeFarmerConfirmOpen] = useState<boolean>(false);
+
+  // Sync selectedFarmerId with activeFarmerId from MandiContext
+  useEffect(() => {
+    if (activeFarmerId) {
+      setSelectedFarmerId(activeFarmerId);
+    }
+  }, [activeFarmerId]);
 
   // Instant Registration Panel State
   const [isRegistrationPanelOpen, setIsRegistrationPanelOpen] = useState<boolean>(false);
@@ -307,6 +316,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
 
   const clearFarmerSelection = () => {
     setSelectedFarmerId('');
+    setActiveFarmerId('');
     setFarmerSearch('');
     setIsFarmerDropdownOpen(false);
     setIsChangeFarmerConfirmOpen(false);
@@ -520,6 +530,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
     });
 
     setSelectedFarmerId(created.id);
+    setActiveFarmerId(created.id);
     setIsRegistrationPanelOpen(false);
     setRegFarmerName('');
     setRegFarmerPhone('');
@@ -547,6 +558,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
       photoUrl: newFarmerPhotoUrl.trim(),
     });
     setSelectedFarmerId(created.id);
+    setActiveFarmerId(created.id);
     setShowInlineAddFarmer(false);
     setNewFarmerName('');
     setNewFarmerPhone('');
@@ -1114,6 +1126,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
                         type="button"
                         onClick={() => {
                           setSelectedFarmerId(f.id);
+                          setActiveFarmerId(f.id);
                           setIsFarmerDropdownOpen(false);
                           setFarmerSearch('');
                           setFarmerFieldError(null);
@@ -1143,30 +1156,44 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
               )}
             </div>
 
-            {/* Recent Farmers Chips (shown when search is empty) */}
-            {farmerSearch === '' && recentFarmers.length > 0 && (
-              <div className="space-y-1 pt-1">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                  Recent Farmers:
-                </span>
-                <div className="flex flex-wrap gap-1.5">
-                  {recentFarmers.map((f) => (
+            {/* Recent / All Registered Farmers Chips */}
+            {farmerSearch === '' && (() => {
+              const activeFarmers = farmers.filter((f) => !f.isArchived);
+              if (activeFarmers.length === 0) return null;
+              return (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase tracking-wider text-[#1a3a52]">
+                      REGISTERED FARMERS ({activeFarmers.length}):
+                    </span>
                     <button
-                      key={f.id}
                       type="button"
-                      onClick={() => {
-                        setSelectedFarmerId(f.id);
-                        setFarmerFieldError(null);
-                      }}
-                      className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-blue-50 hover:border-blue-300 text-slate-800 font-bold text-xs border border-slate-200 transition-colors flex items-center gap-1 cursor-pointer"
+                      onClick={() => setIsFarmerDropdownOpen(!isFarmerDropdownOpen)}
+                      className="text-[11px] font-bold text-[#1a3a52] hover:underline cursor-pointer"
                     >
-                      <span>{f.name}</span>
-                      {f.village && <span className="text-[10px] text-slate-500">({f.village})</span>}
+                      {isFarmerDropdownOpen ? '▲ Close List' : '▼ View Full List'}
                     </button>
-                  ))}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 max-h-36 overflow-y-auto p-1 bg-slate-50/70 border border-slate-200 rounded-xl">
+                    {activeFarmers.map((f) => (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedFarmerId(f.id);
+                          setActiveFarmerId(f.id);
+                          setFarmerFieldError(null);
+                        }}
+                        className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-blue-50 hover:border-blue-400 text-slate-800 font-bold text-xs border border-slate-200 transition-all shadow-2xs flex items-center gap-1 cursor-pointer"
+                      >
+                        <span className="text-[#1a3a52]">{f.name}</span>
+                        {f.village && <span className="text-[10px] text-slate-500">({f.village})</span>}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </div>
         ) : null}
 
@@ -1923,6 +1950,7 @@ export const NewSaleView: React.FC<NewSaleViewProps> = ({ mode, targetMerchantId
         initialNameQuery={farmerSearch}
         onFarmerSaved={(savedFarmer) => {
           setSelectedFarmerId(savedFarmer.id);
+          setActiveFarmerId(savedFarmer.id);
           setFarmerSearch('');
           setIsFarmerDropdownOpen(false);
           setFarmerFieldError(null);

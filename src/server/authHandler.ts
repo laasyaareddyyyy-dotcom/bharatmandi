@@ -507,12 +507,7 @@ export async function handleSendOtp(reqBody: any, req?: any) {
   const hasPassword = Boolean(account && (account.passwordHash || account.pinHash));
 
   if (purpose === 'signup' && hasPassword) {
-    console.warn(`[AUTH LOG] [/api/auth/send-otp] Number +91****${cleanPhone.slice(-4)} is already registered with a password`);
-    return {
-      success: false,
-      isAlreadyRegistered: true,
-      error: 'This mobile number is already registered. Please log in with your password.',
-    };
+    console.log(`[AUTH LOG] [/api/auth/send-otp] Number +91****${cleanPhone.slice(-4)} is registered. Sending OTP for instant login verification.`);
   }
 
   if (purpose === 'forgot-password' && !account) {

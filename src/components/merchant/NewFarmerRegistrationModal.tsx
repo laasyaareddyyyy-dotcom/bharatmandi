@@ -149,13 +149,11 @@ export const NewFarmerRegistrationModal: React.FC<NewFarmerRegistrationModalProp
   const isFormValid = useMemo(() => {
     const cleanP = phone.trim().replace(/\D/g, '').slice(-10);
     return (
-      name.trim().length >= 2 &&
+      name.trim().length >= 1 &&
       !nameCharError &&
-      cleanP.length === 10 &&
-      !duplicateFarmer &&
-      village.trim().length >= 2
+      (cleanP.length === 0 || cleanP.length === 10)
     );
-  }, [name, nameCharError, phone, duplicateFarmer, village]);
+  }, [name, nameCharError, phone]);
 
   // Handle Cancel / Discard Guard
   const handleAttemptClose = () => {

@@ -69,6 +69,8 @@ export const FarmersView: React.FC<FarmersViewProps> = ({
     sendConnectionRequest,
     registeredAccounts,
     currentUserPhone,
+    setActiveFarmerId,
+    setMerchantTab,
     language,
     t,
   } = useMandi();
@@ -322,21 +324,7 @@ export const FarmersView: React.FC<FarmersViewProps> = ({
       return;
     }
 
-    // Duplicate check ignoring case and extra whitespace
-    const normalizedNewName = trimmedName.replace(/\s+/g, ' ').toLowerCase();
-    const isDuplicate = farmers.some(
-      (f) =>
-        f &&
-        f.id !== editingFarmer?.id &&
-        f.name &&
-        f.name.replace(/\s+/g, ' ').trim().toLowerCase() === normalizedNewName
-    );
-    if (isDuplicate) {
-      setFormError('Already registered');
-      return;
-    }
-
-    // Phone validation - optional
+    // Optional Phone validation
     let cleanPhone = '';
     if (formPhone.trim()) {
       const phoneVal = validateIndianMobile(formPhone);
@@ -514,7 +502,14 @@ export const FarmersView: React.FC<FarmersViewProps> = ({
 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="font-bold text-sm sm:text-base text-[#1e293b] truncate max-w-[180px] sm:max-w-none">
+                              <h4
+                                onClick={() => {
+                                  setActiveFarmerId(farmer.id);
+                                  setMerchantTab('new-sale');
+                                }}
+                                className="font-bold text-sm sm:text-base text-[#1a3a52] hover:text-[#0f2332] hover:underline cursor-pointer truncate max-w-[180px] sm:max-w-none"
+                                title="Click to create entry for this farmer"
+                              >
                                 {farmer.name}
                               </h4>
                               <span className="font-mono text-[10px] bg-[#f8fafc] text-[#64748b] px-1.5 py-0.5 rounded border border-[#e2e8f0] shrink-0">
@@ -621,7 +616,19 @@ export const FarmersView: React.FC<FarmersViewProps> = ({
                           className="w-full py-2.5 rounded-xl bg-[#1a3a52] hover:bg-[#122839] text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
                         >
                           <BookOpen className="w-3.5 h-3.5 text-[#d4af37]" />
-                          <span>{language === 'te' ? 'వ్యక్తిగత ఖాతా (ఖాతా చూడండి)' : 'View Farmer Khata / Ledger'}</span>
+                          <span>{language === 'te' ? 'ఖాతా చూడండి' : 'View Ledger'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          id={`create-entry-btn-${farmer.id}`}
+                          onClick={() => {
+                            setActiveFarmerId(farmer.id);
+                            setMerchantTab('new-sale');
+                          }}
+                          className="w-full py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5 text-white" />
+                          <span>+ Create Entry</span>
                         </button>
                       </div>
                     </div>
@@ -644,8 +651,9 @@ export const FarmersView: React.FC<FarmersViewProps> = ({
         }}
         editingFarmer={editingFarmer}
         onFarmerSaved={(savedFarmer) => {
-          setNotificationMsg(`✓ Farmer "${savedFarmer.name}" saved successfully (${savedFarmer.id})!`);
-          setTimeout(() => setNotificationMsg(null), 3500);
+          setActiveFarmerId(savedFarmer.id);
+          setNotificationMsg(`✓ Registered ${savedFarmer.name} (${savedFarmer.id})! Click '+ Create Entry' below or switch to New Sale to mark entries on their name.`);
+          setTimeout(() => setNotificationMsg(null), 5000);
         }}
       />
 

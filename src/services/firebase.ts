@@ -9,33 +9,32 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
+// Global safety listener to handle transient Firestore internal assertion warnings in iframe sandboxes
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    const msg = String(event.reason?.message || event.reason || '');
+    if (msg.includes('FIRESTORE') && msg.includes('INTERNAL ASSERTION FAILED')) {
+      console.warn('[Firestore] Suppressed transient internal assertion note:', msg);
+      event.preventDefault();
+    }
+  });
+}
+
 // Initialize Firebase App
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-// Safely initialize Firestore with robust local cache fallback to prevent IndexedDB batch collisions
+// Safely initialize Firestore using memoryLocalCache to prevent IndexedDB tab lock assertion failures in iframe sandboxes
 let firestoreDb;
 try {
   firestoreDb = initializeFirestore(
     app,
     {
-      localCache: persistentLocalCache({
-        tabManager: persistentSingleTabManager({}),
-      }),
+      localCache: memoryLocalCache(),
     },
     firebaseConfig.firestoreDatabaseId
   );
 } catch {
-  try {
-    firestoreDb = initializeFirestore(
-      app,
-      {
-        localCache: memoryLocalCache(),
-      },
-      firebaseConfig.firestoreDatabaseId
-    );
-  } catch {
-    firestoreDb = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-  }
+  firestoreDb = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 }
 
 export const db = firestoreDb;

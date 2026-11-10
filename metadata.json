@@ -1,6 +1,6 @@
 {
   "name": "BHARAT MANDI",
-  "description": "Multi-commodity agricultural marketplace settlement tracker & auction ledger for all mandis with dynamic commission deductions, farmer accounts, and PDF settlement reports.",
+  "description": "BHARAT MANDI",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

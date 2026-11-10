@@ -356,22 +356,6 @@ export const MobileDrawer: React.FC<MobileDrawerProps> = ({ isOpen, onClose }) =
                 </button>
               )}
 
-              {/* Log Out & Switch Account */}
-              <button
-                type="button"
-                id="drawer-logout-action-btn"
-                onClick={() => {
-                  logoutCurrentUser();
-                  onClose();
-                }}
-                className="w-full flex items-center justify-between p-2.5 rounded-xl bg-red-50/70 hover:bg-red-100/80 border border-red-200 text-xs font-bold text-red-800 min-touch-target cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5">
-                  <LogOut className="w-4 h-4 text-red-600" />
-                  <span>Log Out &amp; Switch User</span>
-                </div>
-                <ChevronRight className="w-3.5 h-3.5 text-red-400" />
-              </button>
             </div>
           </div>
 

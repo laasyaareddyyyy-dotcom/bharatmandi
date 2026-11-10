@@ -723,7 +723,7 @@ _Generated via भारत MANDI Ledger_`;
 
             {/* Receipt Footer */}
             <div className="text-center text-[9px] text-slate-400 pt-2 border-t border-slate-200/40">
-              <p>*** Wholesale Market Yard ***</p>
+              <p>*** Bharat Mandi ***</p>
               <p className="text-[8px] mt-0.5">Printed via भारत MANDI</p>
             </div>
           </div>

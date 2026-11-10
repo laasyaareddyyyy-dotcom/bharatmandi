@@ -56,6 +56,9 @@ export function cleanUndefinedValues<T>(obj: T): T {
 /**
  * Saves or updates all Mandi data via authenticated server endpoint (/api/data/sync)
  */
+/**
+ * Saves or updates all Mandi data directly in Firestore under user document and subcollections
+ */
 export async function syncToFirestore(
   data: {
     profile?: MerchantProfile;
@@ -73,28 +76,115 @@ export async function syncToFirestore(
   },
   overridePhone?: string
 ): Promise<{ success: boolean; error?: string }> {
+  // 1. Try server sync endpoint if authorized
   try {
     const headers = getAuthHeaders();
     if (headers['Authorization']) {
-      const res = await fetch('/api/data/sync', {
+      await fetch('/api/data/sync', {
         method: 'POST',
         headers,
         body: JSON.stringify(data),
       });
-      const resJson = await res.json();
-      if (resJson.success) {
-        return { success: true };
-      }
-      return { success: false, error: resJson.error || 'Server sync error' };
     }
   } catch (err) {
-    console.warn('[Data Sync] Server data sync endpoint exception:', err);
+    console.warn('[Data Sync] Server endpoint sync note:', err);
   }
 
+  // 2. Direct Firestore SDK write for guaranteed cloud persistence across devices
+  const targetPhone =
+    overridePhone ||
+    localStorage.getItem('bharatmandi_active_user_phone') ||
+    localStorage.getItem('bharatmandi_active_phone_v1') ||
+    '';
+  const cleanPhone = targetPhone.replace(/\D/g, '').slice(-10);
+
+  if (cleanPhone && cleanPhone.length === 10) {
+    try {
+      const { doc, setDoc, collection } = await import('firebase/firestore');
+      const { db, ensureFirebaseAuth } = await import('./firebase');
+      await ensureFirebaseAuth();
+
+      const merchantRef = doc(db, 'merchants', `merchant-${cleanPhone}`);
+
+      // Profile
+      if (data.profile) {
+        await setDoc(
+          merchantRef,
+          cleanUndefinedValues({
+            ...data.profile,
+            userPhone: cleanPhone,
+            updatedAt: new Date().toISOString(),
+          }),
+          { merge: true }
+        );
+      }
+
+      // Farmers
+      if (Array.isArray(data.farmers)) {
+        for (const farmer of data.farmers) {
+          if (!farmer.id) continue;
+          await setDoc(doc(db, 'merchants', `merchant-${cleanPhone}`, 'farmers', String(farmer.id)), cleanUndefinedValues(farmer), { merge: true });
+        }
+      }
+
+      // Lots (Parchis & Form C)
+      if (Array.isArray(data.lots)) {
+        for (const lot of data.lots) {
+          if (!lot.id) continue;
+          await setDoc(doc(db, 'merchants', `merchant-${cleanPhone}`, 'lots', String(lot.id)), cleanUndefinedValues(lot), { merge: true });
+        }
+      }
+
+      // Shipments
+      if (Array.isArray(data.shipments)) {
+        for (const shipment of data.shipments) {
+          if (!shipment.id) continue;
+          await setDoc(doc(db, 'merchants', `merchant-${cleanPhone}`, 'shipments', String(shipment.id)), cleanUndefinedValues(shipment), { merge: true });
+        }
+      }
+
+      // Payments
+      if (Array.isArray(data.payments)) {
+        for (const payment of data.payments) {
+          if (!payment.id) continue;
+          await setDoc(doc(db, 'merchants', `merchant-${cleanPhone}`, 'payments', String(payment.id)), cleanUndefinedValues(payment), { merge: true });
+        }
+      }
+
+      // Settlements
+      if (Array.isArray(data.settlements)) {
+        for (const settlement of data.settlements) {
+          if (!settlement.id) continue;
+          await setDoc(doc(db, 'merchants', `merchant-${cleanPhone}`, 'settlements', String(settlement.id)), cleanUndefinedValues(settlement), { merge: true });
+        }
+      }
+
+      // Stocks
+      if (Array.isArray(data.stocks)) {
+        for (const stock of data.stocks) {
+          if (!stock.id) continue;
+          await setDoc(doc(db, 'merchants', `merchant-${cleanPhone}`, 'stocks', String(stock.id)), cleanUndefinedValues(stock), { merge: true });
+        }
+      }
+
+      // Employees
+      if (Array.isArray(data.employees)) {
+        for (const emp of data.employees) {
+          if (!emp.id) continue;
+          await setDoc(doc(db, 'merchants', `merchant-${cleanPhone}`, 'employees', String(emp.id)), cleanUndefinedValues(emp), { merge: true });
+        }
+      }
+    } catch (err) {
+      console.warn('[Data Sync] Direct Firestore merchant write exception:', err);
+    }
+  }
+
+  // Registered Accounts write
   if (Array.isArray(data.registeredAccounts) && data.registeredAccounts.length > 0) {
     try {
       const { doc, setDoc } = await import('firebase/firestore');
-      const { db } = await import('./firebase');
+      const { db, ensureFirebaseAuth } = await import('./firebase');
+      await ensureFirebaseAuth();
       for (const acc of data.registeredAccounts) {
         if (acc && acc.phoneNumber) {
           const clean = acc.phoneNumber.replace(/\D/g, '').slice(-10);
@@ -112,7 +202,7 @@ export async function syncToFirestore(
 }
 
 /**
- * Fetches all user records via authenticated server endpoint (/api/data/fetch)
+ * Fetches all user records directly from Firestore under user document and subcollections
  */
 export async function fetchFromFirestore(targetPhone?: string): Promise<{
   profile?: MerchantProfile;
@@ -127,36 +217,14 @@ export async function fetchFromFirestore(targetPhone?: string): Promise<{
   registeredAccounts: RegisteredAccount[];
   helpTickets: HelpTicket[];
 } | null> {
-  try {
-    const headers = getAuthHeaders();
-    if (headers['Authorization']) {
-      const res = await fetch('/api/data/fetch', {
-        method: 'GET',
-        headers,
-        signal: AbortSignal.timeout(5000),
-      });
-      const resJson = await res.json();
-      if (resJson.success && resJson.data) {
-        return {
-          profile: resJson.data.profile,
-          farmers: (resJson.data.farmers || []) as Farmer[],
-          lots: (resJson.data.lots || []) as SaleLot[],
-          shipments: (resJson.data.shipments || []) as Shipment[],
-          payments: (resJson.data.payments || []) as PaymentRecord[],
-          settlements: (resJson.data.settlements || []) as FifteenDaySettlement[],
-          stocks: (resJson.data.stocks || []) as StockItem[],
-          employees: (resJson.data.employees || []) as EmployeeRecord[],
-          parchiAuditLogs: [],
-          helpTickets: [],
-          registeredAccounts: [],
-        };
-      }
-    }
-  } catch (err) {
-    console.warn('[Data Fetch] Server data fetch endpoint exception:', err);
-  }
+  const phoneToFetch =
+    targetPhone ||
+    localStorage.getItem('bharatmandi_active_user_phone') ||
+    localStorage.getItem('bharatmandi_active_phone_v1') ||
+    '';
+  const cleanPhone = phoneToFetch.replace(/\D/g, '').slice(-10);
 
-  return {
+  let fetchedData: any = {
     profile: undefined,
     farmers: [],
     lots: [],
@@ -169,6 +237,87 @@ export async function fetchFromFirestore(targetPhone?: string): Promise<{
     helpTickets: [],
     registeredAccounts: [],
   };
+
+  // 1. Attempt server data fetch endpoint
+  try {
+    const headers = getAuthHeaders();
+    if (headers['Authorization']) {
+      const res = await fetch('/api/data/fetch', {
+        method: 'GET',
+        headers,
+        signal: AbortSignal.timeout(5000),
+      });
+      const resJson = await res.json();
+      if (resJson.success && resJson.data) {
+        if (resJson.data.profile) fetchedData.profile = resJson.data.profile;
+        if (Array.isArray(resJson.data.farmers)) fetchedData.farmers = resJson.data.farmers;
+        if (Array.isArray(resJson.data.lots)) fetchedData.lots = resJson.data.lots;
+        if (Array.isArray(resJson.data.shipments)) fetchedData.shipments = resJson.data.shipments;
+        if (Array.isArray(resJson.data.payments)) fetchedData.payments = resJson.data.payments;
+        if (Array.isArray(resJson.data.settlements)) fetchedData.settlements = resJson.data.settlements;
+        if (Array.isArray(resJson.data.stocks)) fetchedData.stocks = resJson.data.stocks;
+        if (Array.isArray(resJson.data.employees)) fetchedData.employees = resJson.data.employees;
+      }
+    }
+  } catch (err) {
+    console.warn('[Data Fetch] Server data fetch endpoint note:', err);
+  }
+
+  // 2. Direct Firestore SDK read to retrieve user data across devices
+  if (cleanPhone && cleanPhone.length === 10) {
+    try {
+      const { doc, getDoc, collection, getDocs } = await import('firebase/firestore');
+      const { db, ensureFirebaseAuth } = await import('./firebase');
+      await ensureFirebaseAuth();
+
+      const merchantRef = doc(db, 'merchants', `merchant-${cleanPhone}`);
+      const merchantSnap = await getDoc(merchantRef);
+
+      if (merchantSnap.exists()) {
+        const snapProfile = merchantSnap.data() as MerchantProfile;
+        if (snapProfile) fetchedData.profile = { ...fetchedData.profile, ...snapProfile };
+      }
+
+      const fetchSubDocs = async (collectionName: string) => {
+        try {
+          const snap = await getDocs(collection(db, 'merchants', `merchant-${cleanPhone}`, collectionName));
+          if (!snap.empty) {
+            return snap.docs.map((d) => d.data());
+          }
+        } catch {}
+        return [];
+      };
+
+      const [cloudFarmers, cloudLots, cloudShipments, cloudPayments, cloudSettlements, cloudStocks, cloudEmployees] = await Promise.all([
+        fetchSubDocs('farmers'),
+        fetchSubDocs('lots'),
+        fetchSubDocs('shipments'),
+        fetchSubDocs('payments'),
+        fetchSubDocs('settlements'),
+        fetchSubDocs('stocks'),
+        fetchSubDocs('employees'),
+      ]);
+
+      if (cloudFarmers.length > 0) fetchedData.farmers = cloudFarmers as Farmer[];
+      if (cloudLots.length > 0) fetchedData.lots = cloudLots as SaleLot[];
+      if (cloudShipments.length > 0) fetchedData.shipments = cloudShipments as Shipment[];
+      if (cloudPayments.length > 0) fetchedData.payments = cloudPayments as PaymentRecord[];
+      if (cloudSettlements.length > 0) fetchedData.settlements = cloudSettlements as FifteenDaySettlement[];
+      if (cloudStocks.length > 0) fetchedData.stocks = cloudStocks as StockItem[];
+      if (cloudEmployees.length > 0) fetchedData.employees = cloudEmployees as EmployeeRecord[];
+
+      // Also load account record
+      const accRef = doc(db, 'registeredAccounts', cleanPhone);
+      const accSnap = await getDoc(accRef);
+      if (accSnap.exists()) {
+        fetchedData.registeredAccounts = [accSnap.data() as RegisteredAccount];
+      }
+    } catch (err) {
+      console.warn('[Data Fetch] Direct Firestore merchant read exception:', err);
+    }
+  }
+
+  return fetchedData;
 }
 
 /**
@@ -181,14 +330,15 @@ export async function fetchUserAccountByPhone(phone: string): Promise<Registered
 
   try {
     const { doc, getDoc } = await import('firebase/firestore');
-    const { db } = await import('./firebase');
+    const { db, ensureFirebaseAuth } = await import('./firebase');
+    await ensureFirebaseAuth();
     const docRef = doc(db, 'registeredAccounts', cleanPhone);
     const snap = await getDoc(docRef);
     if (snap.exists()) {
       return snap.data() as RegisteredAccount;
     }
   } catch (err) {
-    console.warn('[Firestore] fetchUserAccountByPhone exception:', err);
+    console.warn('[Firestore] fetchUserAccountByPhone note:', err instanceof Error ? err.message : String(err));
   }
   return null;
 }
@@ -209,7 +359,8 @@ export async function fetchUserAccountByUsernameOrPhone(identifier: string): Pro
 
   try {
     const { collection, query, where, getDocs } = await import('firebase/firestore');
-    const { db } = await import('./firebase');
+    const { db, ensureFirebaseAuth } = await import('./firebase');
+    await ensureFirebaseAuth();
     const accountsRef = collection(db, 'registeredAccounts');
 
     // Query by username
@@ -228,14 +379,14 @@ export async function fetchUserAccountByUsernameOrPhone(identifier: string): Pro
       }
     }
   } catch (err) {
-    console.warn('[Firestore] fetchUserAccountByUsernameOrPhone exception:', err);
+    console.warn('[Firestore] fetchUserAccountByUsernameOrPhone note:', err instanceof Error ? err.message : String(err));
   }
 
   return null;
 }
 
 /**
- * Server-authenticated polling listener for live multi-device syncing
+ * Real-time Firestore Listener & polling listener for live multi-device syncing
  */
 export function subscribeToFirestore(
   targetPhone: string,
@@ -251,13 +402,60 @@ export function subscribeToFirestore(
   }) => void
 ) {
   let active = true;
-  let isPolling = false;
+  const cleanPhone = targetPhone ? targetPhone.replace(/\D/g, '').slice(-10) : '';
 
-  const poll = async () => {
-    if (!active || isPolling) return;
-    isPolling = true;
+  let unsubs: (() => void)[] = [];
+
+  if (cleanPhone && cleanPhone.length === 10) {
+    import('firebase/firestore').then(({ doc, onSnapshot, collection }) => {
+      import('./firebase').then(({ db }) => {
+        if (!active) return;
+
+        const merchantRef = doc(db, 'merchants', `merchant-${cleanPhone}`);
+
+        // Merchant profile listener
+        const unsubProf = onSnapshot(merchantRef, (snap) => {
+          if (snap.exists() && active) {
+            onUpdate({ profile: snap.data() as MerchantProfile });
+          }
+        }, () => {});
+        unsubs.push(unsubProf);
+
+        // Lots (Parchis & Form C) listener
+        const unsubLots = onSnapshot(collection(db, 'merchants', `merchant-${cleanPhone}`, 'lots'), (snap) => {
+          if (!snap.empty && active) {
+            const lots = snap.docs.map((d) => d.data() as SaleLot);
+            onUpdate({ lots });
+          }
+        }, () => {});
+        unsubs.push(unsubLots);
+
+        // Farmers listener
+        const unsubFarmers = onSnapshot(collection(db, 'merchants', `merchant-${cleanPhone}`, 'farmers'), (snap) => {
+          if (!snap.empty && active) {
+            const farmers = snap.docs.map((d) => d.data() as Farmer);
+            onUpdate({ farmers });
+          }
+        }, () => {});
+        unsubs.push(unsubFarmers);
+
+        // Payments listener
+        const unsubPayments = onSnapshot(collection(db, 'merchants', `merchant-${cleanPhone}`, 'payments'), (snap) => {
+          if (!snap.empty && active) {
+            const payments = snap.docs.map((d) => d.data() as PaymentRecord);
+            onUpdate({ payments });
+          }
+        }, () => {});
+        unsubs.push(unsubPayments);
+      });
+    }).catch(() => {});
+  }
+
+  // Backup polling every 12 seconds
+  const intervalId = setInterval(async () => {
+    if (!active) return;
     try {
-      const fetched = await fetchFromFirestore(targetPhone);
+      const fetched = await fetchFromFirestore(cleanPhone);
       if (fetched && active) {
         onUpdate({
           profile: fetched.profile,
@@ -270,17 +468,15 @@ export function subscribeToFirestore(
           employees: fetched.employees,
         });
       }
-    } finally {
-      isPolling = false;
-    }
-  };
-
-  // Poll server data route every 15 seconds
-  const intervalId = setInterval(poll, 15000);
+    } catch {}
+  }, 12000);
 
   return () => {
     active = false;
     clearInterval(intervalId);
+    unsubs.forEach((unsub) => {
+      try { unsub(); } catch {}
+    });
   };
 }
 

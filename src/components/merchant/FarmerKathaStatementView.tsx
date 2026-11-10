@@ -49,6 +49,8 @@ import { FormCInvoiceCanvas, FormCInvoiceData } from '../common/FormCInvoiceCanv
 import { GeneratePdfModal } from '../common/GeneratePdfModal';
 import { validateIndianMobile } from '../../utils/phoneValidation';
 import { sounds } from '../../utils/audio';
+import { buildFormCData } from '../../utils/formCDataBuilder';
+import { generateVectorKathaPdf } from '../../utils/vectorPdf';
 
 interface FarmerKathaStatementViewProps {
   initialFarmer?: Farmer | null;
@@ -81,6 +83,8 @@ export const FarmerKathaStatementView: React.FC<FarmerKathaStatementViewProps> =
     syncStatementToFarmer,
     connectionRequests,
     activeCommodityFilter,
+    setActiveFarmerId,
+    setMerchantTab,
     language,
     t,
   } = useMandi();
@@ -559,41 +563,61 @@ export const FarmerKathaStatementView: React.FC<FarmerKathaStatementViewProps> =
     };
   }, [currentFarmer, selectedLots, isSingleDay, startDate, endDate, statementMetrics, merchantProfile, todayStr, openingBalance]);
 
-  // Download Form C Combined PDF
+  // Download Form C Combined Vector PDF
   const handleDownloadKathaPdf = async () => {
-    const targetEl = formCPdfRef.current;
-    if (!targetEl || !currentFarmer) return;
+    if (!currentFarmer) return;
     setIsGeneratingPdf(true);
-    setPdfStatusMessage('Preparing PDF…');
+    setPdfStatusMessage('Preparing Farmer Khata Statement Vector PDF…');
     try {
-      const cleanName = currentFarmer.name.replace(/[^a-zA-Z0-9]/g, '_');
-      const periodTag = !startDate && !endDate ? 'AllTime' : (startDate || 'All');
-      const filename = `BharatMandi_Statement_${cleanName}_${periodTag}.pdf`;
-      const result = await exportElementToPdf(targetEl, {
-        filename,
-        format: 'a4',
-        orientation: 'portrait',
-        marginMm: 6,
-        scale: 2,
-        fitToPage: false,
-        autoDownload: true,
+      const statementFormCData = buildFormCData({
+        lots: selectedLots,
+        merchantProfile,
+        farmer: currentFarmer,
+        farmersList: farmers,
+        customSettings: {
+          commissionPercent:
+            statementMetrics.grossTotal > 0
+              ? Math.round((statementMetrics.commissionAmount / statementMetrics.grossTotal) * 100)
+              : merchantProfile.defaultCommissionRate,
+          transportCharges: statementMetrics.transportAmount,
+          ammaliCharges: statementMetrics.hamaliAmount,
+          amountPaid: statementMetrics.amountPaid,
+          paymentStatus:
+            statementMetrics.balanceDue === 0 && statementMetrics.grossTotal > 0
+              ? 'Paid'
+              : statementMetrics.amountPaid > 0
+              ? 'Partial'
+              : 'Unpaid',
+        },
       });
-      if (result.success) {
-        setPdfStatusMessage('✓ Combined Form C Statement PDF downloaded successfully!');
-      } else {
-        setPdfStatusMessage(`PDF could not be created: ${result.error || 'Unknown error'}`);
-      }
+
+      generateVectorKathaPdf(statementFormCData, { autoDownload: true });
+      setPdfStatusMessage('✓ Farmer Khata Statement Vector PDF downloaded successfully!');
     } catch (err: any) {
-      console.error('[Katha PDF Error]', err);
-      setPdfStatusMessage(`PDF could not be created: ${err?.message || 'Error generating Statement PDF'}`);
+      console.error('[Katha Vector PDF Error]', err);
+      const targetEl = formCPdfRef.current;
+      if (targetEl) {
+        await exportElementToPdf(targetEl, {
+          filename: `BharatMandi_Statement_${currentFarmer.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`,
+          format: 'a4',
+          orientation: 'portrait',
+          marginMm: 6,
+          scale: 2,
+          autoDownload: true,
+        });
+        setPdfStatusMessage('✓ Statement PDF downloaded successfully!');
+      }
     } finally {
-      setIsGeneratingPdf(false);
+      setTimeout(() => {
+        setIsGeneratingPdf(false);
+        setPdfStatusMessage('');
+      }, 3500);
     }
   };
 
   const [isSharingPdf, setIsSharingPdf] = useState<boolean>(false);
 
-  // WhatsApp Share Statement
+  // WhatsApp Share Statement Vector PDF
   const handleShareWhatsApp = async (e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -606,36 +630,37 @@ export const FarmerKathaStatementView: React.FC<FarmerKathaStatementViewProps> =
     }
 
     setIsSharingPdf(true);
-    setPdfStatusMessage('Rendering Combined Statement PDF for sharing...');
+    setPdfStatusMessage('Rendering Combined Statement Vector PDF for sharing...');
 
     try {
-      const targetEl = formCPdfRef.current;
-      if (!targetEl) {
-        throw new Error('Please select a farmer and view their statement before sharing.');
-      }
-
-      const cleanName = currentFarmer.name.replace(/[^a-zA-Z0-9]/g, '_');
-      const periodTag = !startDate && !endDate ? 'AllTime' : (startDate || 'All');
-      const filename = `BharatMandi_Statement_${cleanName}_${periodTag}.pdf`;
-
-      const result = await exportElementToPdf(targetEl, {
-        filename,
-        title: `Farmer Statement - ${currentFarmer.name}`,
-        format: 'a4',
-        orientation: 'portrait',
-        marginMm: 6,
-        scale: 2,
-        fitToPage: false,
-        autoDownload: false,
+      const statementFormCData = buildFormCData({
+        lots: selectedLots,
+        merchantProfile,
+        farmer: currentFarmer,
+        farmersList: farmers,
+        customSettings: {
+          commissionPercent:
+            statementMetrics.grossTotal > 0
+              ? Math.round((statementMetrics.commissionAmount / statementMetrics.grossTotal) * 100)
+              : merchantProfile.defaultCommissionRate,
+          transportCharges: statementMetrics.transportAmount,
+          ammaliCharges: statementMetrics.hamaliAmount,
+          amountPaid: statementMetrics.amountPaid,
+          paymentStatus:
+            statementMetrics.balanceDue === 0 && statementMetrics.grossTotal > 0
+              ? 'Paid'
+              : statementMetrics.amountPaid > 0
+              ? 'Partial'
+              : 'Unpaid',
+        },
       });
 
-      if (!result.success || !result.blob) {
-        throw new Error(result.error || 'Failed to render statement PDF');
-      }
+      const doc = generateVectorKathaPdf(statementFormCData, { autoDownload: false });
+      const blob = doc.output('blob');
 
       const shareRes = await sharePdfFile({
-        blob: result.blob,
-        filename,
+        blob,
+        filename: statementFormCData.pdfFileName.replace(/^FormC-/, 'Khata-Statement-'),
         title: `Farmer Khata Statement - ${currentFarmer.name}`,
         fallbackToDownload: true,
       });
@@ -1157,6 +1182,19 @@ export const FarmerKathaStatementView: React.FC<FarmerKathaStatementViewProps> =
                     <Check className="w-4 h-4 text-emerald-600" />
                     <span>{currentFarmer.name}</span>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveFarmerId(currentFarmer.id);
+                      setMerchantTab('new-sale');
+                      if (onClose) onClose();
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow-xs"
+                    title="Create sale/lot entry marked on farmer's name"
+                  >
+                    <Plus className="w-3.5 h-3.5 text-white" />
+                    <span>+ Entry on Name</span>
+                  </button>
                   <button
                     type="button"
                     id="katha-edit-farmer-header-btn"

@@ -43,6 +43,7 @@ export interface FormCInvoiceData {
   totalPaid?: number;
   closingBalance?: number;
   parchiNumber: string;
+  formCNumber?: string;
   date: string;
   time: string;
   farmerName: string;
@@ -61,6 +62,7 @@ export interface FormCInvoiceData {
   miscCommissionPercent?: number;
   miscCommissionAmount?: number;
   otherDeductions?: Array<{ name: string; amount: number }>;
+  totalDeductions?: number;
   farmerNetPayable: number;
   amountPaid: number;
   balanceDue?: number;
@@ -85,11 +87,14 @@ interface FormCInvoiceCanvasProps {
 }
 
 /**
- * Formats currency in Indian locale (e.g. ₹23,891)
+ * Formats currency in Indian locale to 2 decimal places (e.g. ₹18,440.00)
  */
 export function formatIndianCurrency(amount: number): string {
   const num = Math.abs(Number(amount) || 0);
-  const formatted = num.toLocaleString('en-IN');
+  const formatted = num.toLocaleString('en-IN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
   return `${amount < 0 ? '-' : ''}₹${formatted}`;
 }
 
@@ -101,23 +106,43 @@ export const FormCInvoiceCanvas = forwardRef<HTMLDivElement, FormCInvoiceCanvasP
     const isRetail = data.mode === 'retailer';
 
     // Merchant Profile Labels
-    const rawShopName = merchantOverride?.shopName || merchantProfile?.shopName || 'Mandi Wholesale Merchant';
-    const shopName = rawShopName.replace(/\bAPMC\b/gi, '').trim() || 'Mandi Wholesale Merchant';
+    const rawShopName = (merchantOverride?.shopName || merchantProfile?.shopName || '')
+      .replace(/\bAPMC\b/gi, '')
+      .replace(/\bMandi Wholesale Merchant\b/gi, '')
+      .replace(/\bWholesale Market Yard\b/gi, '')
+      .trim();
+    const shopName = rawShopName && rawShopName !== 'Mandi Wholesale Merchant' ? rawShopName : 'BHARAT MANDI';
 
-    const rawShopNumber = merchantOverride?.shopNumber || merchantProfile?.shopNumber || '1';
+    const rawShopNumber = merchantOverride?.shopNumber || merchantProfile?.shopNumber || '';
     const cleanShopNumber = rawShopNumber
       .replace(/^(shop\s*no\.?|shop\s*#?|stall\s*no\.?|shop)\s*/i, '')
       .replace(/\bAPMC\b/gi, '')
       .trim();
 
-    const rawMarketYard = merchantOverride?.marketYardName || merchantProfile?.marketYardName || 'Wholesale Market Yard';
-    const cleanMarketYard = rawMarketYard.replace(/\bAPMC\b/gi, '').trim();
+    const rawMarketYard = (merchantOverride?.marketYardName || merchantProfile?.marketYardName || '')
+      .replace(/\bAPMC\b/gi, '')
+      .replace(/\bWholesale Market Yard\b/gi, '')
+      .trim();
 
-    const shopAddressDisplay = merchantProfile?.address && merchantProfile.address.trim()
-      ? merchantProfile.address
-      : `Shop No. ${cleanShopNumber || '1'} • ${cleanMarketYard}`;
+    const rawAddress = (merchantProfile?.address || '')
+      .replace(/\bWholesale Market Yard\b/gi, '')
+      .replace(/\bMandi Wholesale Merchant\b/gi, '')
+      .trim();
 
-    const ownerName = (merchantOverride?.ownerName || merchantProfile?.ownerName || 'Mandi Trader').replace(/\bAPMC\b/gi, '').trim();
+    const shopAddressDisplay = rawAddress
+      ? rawAddress
+      : rawMarketYard
+      ? `Shop No. ${cleanShopNumber || '1'} • ${rawMarketYard}`
+      : cleanShopNumber
+      ? `Shop No. ${cleanShopNumber}`
+      : '';
+
+    const rawOwner = (merchantOverride?.ownerName || merchantProfile?.ownerName || '')
+      .replace(/\bAPMC\b/gi, '')
+      .replace(/\bMandi Trader\b/gi, '')
+      .trim();
+
+    const ownerName = rawOwner && rawOwner !== 'Mandi Trader' ? rawOwner : '';
     const phoneNumber = merchantOverride?.phoneNumber || merchantProfile?.phoneNumber || '+91 9849012345';
 
     // Clean Farmer / Customer Labels
@@ -125,9 +150,21 @@ export const FormCInvoiceCanvas = forwardRef<HTMLDivElement, FormCInvoiceCanvasP
     const partyVillage = (data.farmerVillage || 'Mandi Yard').replace(/\bAPMC\b/gi, '').trim();
     const farmerInitial = partyName ? partyName.charAt(0).toUpperCase() : 'G';
 
-    // Aggregate Box Counts & Volumes
+    // Aggregate Box Counts & Volumes & Deductions
     const totalBoxes = data.items.reduce((acc, it) => acc + (Number(it.boxesCount) || 0), 0);
     const totalVolumeKgs = data.items.reduce((acc, it) => acc + (Number(it.quantity) || 0), 0);
+    const calculatedTotalDeductions =
+      data.totalDeductions !== undefined
+        ? data.totalDeductions
+        : Number(
+            (
+              Number(data.transportCharges || 0) +
+              Number(data.ammaliCharges || 0) +
+              Number(data.commissionAmount || 0) +
+              Number(data.miscCommissionAmount || 0) +
+              (data.otherDeductions || []).reduce((acc, d) => acc + (Number(d.amount) || 0), 0)
+            ).toFixed(2)
+          );
 
     // If rendering Retail Statement
     if (data.isRetailStatement) {
@@ -257,209 +294,319 @@ export const FormCInvoiceCanvas = forwardRef<HTMLDivElement, FormCInvoiceCanvasP
       );
     }
 
-    // ON-SCREEN MANDI SALE PARCHI TICKET VIEW (Matching Screenshots 2 & 3)
+    // OFFICIAL WHOLESALE MANDI SALE PARCHI • FORM C (Matching FormC-GRS-2026-10-31-1.pdf)
     return (
       <div
         ref={ref}
         id="form-c-official-invoice-canvas"
-        className="bg-white text-slate-800 rounded-2xl p-5 sm:p-7 max-w-md sm:max-w-lg mx-auto shadow-xl border border-slate-200 space-y-4 w-full"
+        className="bg-white text-slate-900 rounded-2xl p-6 sm:p-8 max-w-4xl w-full mx-auto shadow-sm border border-slate-200 space-y-4 font-sans text-xs leading-relaxed"
         style={{
           fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
           pageBreakInside: 'avoid',
         }}
       >
-        {/* 1. CENTERED SHOP HEADER */}
-        <div className="text-center space-y-1">
-          <div className="flex justify-center mb-1">
-            <img
-              src="/bharat_mandi_logo.png"
-              alt="Bharat Mandi"
-              referrerPolicy="no-referrer"
-              className="w-10 h-10 object-contain"
-            />
+        {/* 1. TOP HEADER */}
+        <div className="flex items-start justify-between gap-4 pb-4 border-b border-slate-200">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 mb-1">
+              <img
+                src="/bharat_mandi_logo.png"
+                alt="Bharat Mandi"
+                className="w-8 h-8 object-contain shrink-0"
+              />
+              <span className="inline-block bg-slate-100 text-slate-600 font-extrabold text-[9px] uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-slate-200">
+                MANDI SALE PARCHI • FORM C
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900 uppercase tracking-tight leading-tight my-0.5">
+              {shopName}
+            </h1>
+            <p className="text-xs font-bold text-slate-800 leading-snug">
+              {shopAddressDisplay}
+            </p>
+            <p className="text-xs text-slate-600">
+              {ownerName ? (
+                <>Proprietor: <span className="font-bold text-slate-800">{ownerName}</span> &nbsp;•&nbsp; </>
+              ) : null}
+              Contact: <span className="font-bold text-slate-800">{phoneNumber}</span>
+            </p>
           </div>
-          <span className="text-[10px] font-extrabold uppercase text-slate-500 tracking-wider block">
-            WHOLESALE MANDI COMMISSION AGENT
-          </span>
-          <h1 className="text-lg sm:text-xl font-black text-slate-900 tracking-tight leading-tight block">
-            {shopName}
-          </h1>
-          <p className="text-xs font-bold text-slate-700 block">
-            {shopAddressDisplay}
-          </p>
-          <p className="text-[11px] text-slate-500 block">
-            Adathiya: <span className="font-semibold text-slate-800">{ownerName}</span> | Ph: <span className="font-semibold text-slate-800">{phoneNumber}</span>
-          </p>
-          <div className="pt-1">
-            <span className="inline-block bg-slate-100 text-slate-800 font-extrabold text-[10px] uppercase tracking-widest px-3.5 py-1 rounded-full border border-slate-200">
-              MANDI SALE PARCHI
+
+          <div className="shrink-0 text-right">
+            <span className="inline-block bg-[#e6f4ea] text-[#15803d] font-bold text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-emerald-200 shadow-2xs">
+              OFFICIAL MANDI RECEIPT
             </span>
           </div>
         </div>
 
-        {/* 2. PARCHI META HEADER CARD */}
-        <div className="bg-slate-50 border border-slate-200 p-3.5 rounded-xl space-y-2.5">
-          <div className="flex items-center justify-between text-xs">
-            <div>
-              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block mb-0.5">
-                PARCHI NO.
-              </span>
-              <span className="font-mono font-black text-slate-900 text-xs sm:text-sm block">
-                {data.parchiNumber || 'SHP-20261027-001'}
-              </span>
-            </div>
-            <div className="text-right">
-              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block mb-0.5">
-                DATE &amp; TIME
-              </span>
-              <span className="font-mono font-bold text-slate-900 text-xs text-right block">
-                {data.date} • {data.time || '12:12 PM'}
-              </span>
-            </div>
-          </div>
-
-          <div className="border-t border-slate-200/80 pt-2.5 flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-800 flex items-center justify-center font-black text-xs shrink-0 shadow-2xs">
-              {farmerInitial}
-            </div>
-            <div>
-              <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block mb-0.5">
-                FARMER / CONSIGNOR
-              </span>
-              <span className="font-black text-slate-900 text-xs sm:text-sm block">
-                {partyName} <span className="font-medium text-slate-500">({partyVillage})</span>
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. VARIETY & PARTICULARS SECTION */}
-        <div className="space-y-2">
-          <div className="flex justify-between items-center text-[10px] font-extrabold uppercase text-slate-400 tracking-wider">
-            <span>VARIETY &amp; PARTICULARS</span>
-            <span>RATE &amp; GROSS</span>
-          </div>
-
-          <div className="divide-y divide-slate-100">
-            {data.items.map((item, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl border border-slate-200 bg-white space-y-2.5 shadow-2xs">
-                <div className="flex justify-between items-start gap-2">
-                  <h3 className="font-black text-slate-900 text-sm sm:text-base leading-tight">
-                    {item.flowerVariety}
-                  </h3>
-                  <span className="font-mono font-black text-slate-900 text-sm sm:text-base shrink-0">
-                    {formatIndianCurrency(item.grossTotal)}
-                  </span>
-                </div>
-
-                {/* Badges row */}
-                <div className="flex flex-wrap items-center gap-1.5 text-[10px]">
-                  {item.boxesCount ? (
-                    <span className="bg-slate-100 px-2 py-0.5 rounded font-bold text-slate-700">
-                      {item.boxesCount} Boxes
-                    </span>
-                  ) : null}
-                  <span className="bg-slate-100 px-2 py-0.5 rounded font-bold text-slate-700">
-                    {item.quantity} {item.unit || 'Kgs'}
-                  </span>
-                  <span className="bg-slate-100 px-2 py-0.5 rounded font-bold text-slate-700">
-                    @ {formatIndianCurrency(item.rate)}/{item.unit || 'Kgs'}
-                  </span>
-                  <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded font-extrabold uppercase">
-                    {item.flowerQuality || 'GOOD'}
-                  </span>
-                </div>
-
-                {/* Sub-box for Lot Info */}
-                <div className="bg-slate-50 border border-slate-200/80 p-2.5 rounded-lg grid grid-cols-2 text-xs">
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                      Lot Type
-                    </span>
-                    <span className="font-bold text-slate-800 text-xs block">
-                      Single Variety Lot
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">
-                      Total Volume
-                    </span>
-                    <span className="font-bold text-slate-800 text-xs font-mono block">
-                      {item.quantity} {item.unit || 'Kgs'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* 4. MANDI RECORDED CHARGES */}
-        <div className="space-y-1.5 pt-1">
-          <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider block mb-1">
-            MANDI RECORDED CHARGES
-          </span>
-          <div className="flex justify-between items-center text-xs text-slate-700 font-semibold py-0.5">
-            <span>Vehicle / Freight Charges</span>
-            <span className="font-mono text-slate-900 font-bold">{formatIndianCurrency(data.transportCharges)}</span>
-          </div>
-          <div className="flex justify-between items-center text-xs text-slate-700 font-semibold py-0.5">
-            <span>Hamali / Loading Charges</span>
-            <span className="font-mono text-slate-900 font-bold">{formatIndianCurrency(data.ammaliCharges)}</span>
-          </div>
-        </div>
-
-        {/* 5. TOTAL SALES AMOUNT BANNER (SOLID DARK NAVY BOX) */}
-        <div className="p-3.5 sm:p-4 rounded-xl bg-[#1e293b] text-white flex justify-between items-center shadow-md">
+        {/* 2. 4-COLUMN INFO CARD */}
+        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 grid grid-cols-4 gap-3 text-xs">
           <div>
-            <span className="block text-xs font-black uppercase tracking-wider text-white">
-              TOTAL SALES AMOUNT
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
+              PARCHI / INV NO.
             </span>
-            <span className="text-[10px] text-slate-300 font-medium block mt-0.5">
-              Gross sales amount (before deductions)
+            <span className="font-mono font-black text-slate-900 text-sm block">
+              {data.parchiNumber || data.formCNumber || 'FC-2026-GRS-3110'}
             </span>
           </div>
-          <span className="text-xl sm:text-2xl font-black font-mono text-white">
+          <div>
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
+              DATE &amp; TIME
+            </span>
+            <span className="font-mono font-bold text-slate-900 text-xs block">
+              {data.date} • {data.time || 'Morning Auction'}
+            </span>
+          </div>
+          <div>
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
+              FARMER
+            </span>
+            <span className="font-black text-slate-900 text-sm block">
+              {partyName}
+            </span>
+          </div>
+          <div>
+            <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block mb-0.5">
+              VILLAGE &amp; CONTACT
+            </span>
+            <span className="font-bold text-slate-900 text-xs block">
+              {partyVillage}
+            </span>
+            {data.farmerPhone && (
+              <span className="font-mono text-slate-600 text-[11px] block mt-0.5">
+                +91 {data.farmerPhone.replace(/\D/g, '').slice(-10)}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* 3. 10-COLUMN ITEMS TABLE */}
+        <div className="overflow-x-auto border border-slate-200 rounded-xl">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-[#f8fafc] text-slate-700 font-bold uppercase text-[9.5px] tracking-wider border-b border-slate-200">
+                <th className="p-2.5">PARCHI &amp; DATE</th>
+                <th className="p-2.5">ITEM / CROP</th>
+                <th className="p-2.5 text-center">QTY</th>
+                <th className="p-2.5 text-right">RATE</th>
+                <th className="p-2.5 text-right">GROSS</th>
+                <th className="p-2.5 text-right">HAMALI</th>
+                <th className="p-2.5 text-right">TRANS</th>
+                <th className="p-2.5 text-right">COMM</th>
+                <th className="p-2.5 text-right">MISC</th>
+                <th className="p-2.5 text-right">NET</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 bg-white font-medium">
+              {data.items.map((item, idx) => (
+                <tr key={idx} className="hover:bg-slate-50/80">
+                  <td className="p-2.5 font-mono">
+                    <span className="font-extrabold text-slate-900 text-[11px] block">
+                      {item.parchiNumber || data.parchiNumber}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      {item.date || data.date}
+                    </span>
+                  </td>
+                  <td className="p-2.5">
+                    <span className="font-black text-slate-900 text-xs block uppercase">
+                      {item.flowerVariety}
+                    </span>
+                    <span className="text-[10px] text-slate-500 block">
+                      {item.boxesCount ? `${item.boxesCount} Boxes` : item.packagingType || '1 Bag'}
+                    </span>
+                  </td>
+                  <td className="p-2.5 text-center font-mono font-bold text-slate-800">
+                    {item.quantity} {item.unit || 'Kgs'}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-bold text-slate-800">
+                    {formatIndianCurrency(item.rate)}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-black text-slate-900">
+                    {formatIndianCurrency(item.grossTotal)}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-bold text-rose-600">
+                    {formatIndianCurrency(item.hamali || 0)}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-bold text-rose-600">
+                    {formatIndianCurrency(item.transport || 0)}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-bold text-rose-600">
+                    {formatIndianCurrency(item.commission || 0)}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-bold text-rose-600">
+                    {formatIndianCurrency(item.misc || 0)}
+                  </td>
+                  <td className="p-2.5 text-right font-mono font-black text-emerald-700">
+                    {formatIndianCurrency(item.farmerNetPayable || item.grossTotal)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* 4. TOTAL SALES AMOUNT (GROSS) CARD */}
+        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 flex justify-between items-center">
+          <div>
+            <span className="text-xs font-black uppercase text-slate-900 tracking-tight block">
+              TOTAL SALES AMOUNT (GROSS)
+            </span>
+            <span className="text-[10px] text-slate-500 font-medium block mt-0.5">
+              Gross sales turnover before APMC mandi charges and commission
+            </span>
+          </div>
+          <span className="text-xl sm:text-2xl font-black font-mono text-slate-900">
             {formatIndianCurrency(data.grossTotal)}
           </span>
         </div>
 
-        {/* 6. DOCUMENT TYPE & VERIFICATION */}
-        <div className="grid grid-cols-2 text-[10px] text-slate-500 pt-2 border-t border-slate-100">
-          <div>
-            <span className="text-slate-400 block">Document Type</span>
-            <span className="font-bold text-slate-700 block">Mandi Verification</span>
+        {/* 5. MANDI CHARGES & COMMISSION DEDUCTIONS CARD */}
+        <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="text-xs font-black text-slate-900 uppercase tracking-tight">
+              MANDI CHARGES &amp; COMMISSION DEDUCTIONS
+            </span>
+            <span className="bg-white border border-slate-200 text-slate-600 font-bold text-[9px] uppercase tracking-widest px-2.5 py-0.5 rounded-md">
+              FORM C SUMMARY
+            </span>
           </div>
-          <div className="text-right">
-            <span className="text-slate-400 block">Daily Auction Weighing Slip</span>
-            <span className="font-bold text-slate-700 block">Official Mandi Entry Recorded</span>
+
+          {/* 4 Summary Boxes Grid (2x2) */}
+          <div className="grid grid-cols-2 gap-2.5">
+            {/* Box 1: Freight */}
+            <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex justify-between items-center">
+              <div>
+                <span className="font-bold text-slate-900 text-xs block">Vehicle / Freight</span>
+                <span className="text-[10px] text-slate-500 block">Transport</span>
+              </div>
+              <span className="font-mono font-bold text-slate-900 text-xs">
+                {formatIndianCurrency(data.transportCharges)}
+              </span>
+            </div>
+
+            {/* Box 2: Hamali */}
+            <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex justify-between items-center">
+              <div>
+                <span className="font-bold text-slate-900 text-xs block">Hamali / Labor</span>
+                <span className="text-[10px] text-slate-500 block">Loading &amp; Unloading</span>
+              </div>
+              <span className="font-mono font-bold text-slate-900 text-xs">
+                {formatIndianCurrency(data.ammaliCharges)}
+              </span>
+            </div>
+
+            {/* Box 3: Commission */}
+            <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex justify-between items-center">
+              <div>
+                <span className="font-bold text-slate-900 text-xs block">Mandi Commission</span>
+                <span className="text-[10px] text-slate-500 block">{data.commissionPercent}% Gross</span>
+              </div>
+              <span className="font-mono font-bold text-rose-600 text-xs">
+                -{formatIndianCurrency(data.commissionAmount)}
+              </span>
+            </div>
+
+            {/* Box 4: Misc Charges */}
+            <div className="bg-white border border-slate-200 rounded-lg p-2.5 flex justify-between items-center">
+              <div>
+                <span className="font-bold text-slate-900 text-xs block">Misc Charges</span>
+                <span className="text-[10px] text-slate-500 block">{data.miscCommissionPercent || 0}%</span>
+              </div>
+              <span className="font-mono font-bold text-rose-600 text-xs">
+                -{formatIndianCurrency(data.miscCommissionAmount)}
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom Pink/Red Deductions Strip */}
+          <div className="bg-[#fef2f2] border border-[#fecdd3] rounded-lg p-2.5 flex justify-between items-center text-xs">
+            <span className="font-extrabold text-slate-900">
+              TOTAL DEDUCTIONS (Freight + Hamali + Comm + Misc):
+            </span>
+            <span className="font-mono font-black text-rose-600">
+              -{formatIndianCurrency(calculatedTotalDeductions)}
+            </span>
           </div>
         </div>
 
-        {/* 7. SIGNATURES */}
-        <div className="grid grid-cols-2 gap-4 pt-6 border-t border-slate-200 text-xs">
-          <div className="text-center pt-2">
-            <span className="text-[10px] font-bold text-slate-400 block border-t border-slate-300 pt-1">
-              Farmer Signature / Thumb
+        {/* 6. NET PAYABLE TO FARMER BANNER */}
+        <div className="bg-[#047857] text-white rounded-xl p-4 flex justify-between items-center shadow-sm">
+          <div>
+            <span className="text-xs sm:text-sm font-black uppercase tracking-wider text-white block">
+              NET PAYABLE TO FARMER:
+            </span>
+            <span className="text-[10.5px] text-emerald-100 font-medium block mt-0.5">
+              Gross Total ({formatIndianCurrency(data.grossTotal)}) – Total Deductions ({formatIndianCurrency(calculatedTotalDeductions)})
             </span>
           </div>
-          <div className="text-center pt-2">
-            <span className="font-bold text-slate-900 text-[11px] block border-t border-slate-300 pt-1 truncate">
-              For {shopName}
+          <span className="text-2xl sm:text-3xl font-black font-mono text-white tracking-tight">
+            {formatIndianCurrency(data.farmerNetPayable)}
+          </span>
+        </div>
+
+        {/* 7. SETTLEMENT STATUS & AUTHORIZATION CARDS */}
+        <div className="grid grid-cols-2 gap-3 text-xs">
+          {/* Settlement Status Card */}
+          <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] font-black uppercase text-slate-800 tracking-wider">
+                SETTLEMENT STATUS
+              </span>
+              <span
+                className={`font-extrabold text-[9px] px-2.5 py-0.5 rounded-md uppercase border ${
+                  data.paymentStatus?.toLowerCase() === 'paid'
+                    ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+                    : data.paymentStatus?.toLowerCase() === 'partial'
+                    ? 'bg-blue-100 text-blue-800 border-blue-200'
+                    : 'bg-amber-100 text-amber-800 border-amber-200'
+                }`}
+              >
+                {data.paymentStatus || 'PENDING'}
+              </span>
+            </div>
+
+            <div className="space-y-1 pt-1">
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Payments / Advances:</span>
+                <span className="font-mono font-bold text-slate-900">{formatIndianCurrency(data.amountPaid || 0)}</span>
+              </div>
+              <div className="flex justify-between items-center text-slate-600">
+                <span>Payment Mode:</span>
+                <span className="font-bold text-slate-800">{data.paymentMode || '—'}</span>
+              </div>
+              <div className="border-t border-slate-200 pt-1.5 flex justify-between items-center">
+                <span className="font-bold text-slate-900">Final Balance Due:</span>
+                <span className="font-mono font-black text-emerald-800 text-sm">
+                  {formatIndianCurrency(data.balanceDue !== undefined ? data.balanceDue : data.farmerNetPayable)}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Authorization Card */}
+          <div className="bg-[#f8fafc] border border-slate-200 rounded-xl p-3.5 flex flex-col justify-between text-right">
+            <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-wider block">
+              AUTHORIZATION &amp; SEAL
             </span>
-            <span className="text-[9px] text-slate-500 block truncate">
-              (Authorized Signatory)
-            </span>
+            <div className="pt-6">
+              <span className="font-bold text-slate-900 text-xs block">
+                For {shopName}
+              </span>
+              <span className="text-[9.5px] text-slate-500 block">
+                (Authorized Signatory / Mandi Licensee)
+              </span>
+            </div>
           </div>
         </div>
 
         {/* 8. FOOTER */}
-        <div className="text-center pt-2 border-t border-slate-100 space-y-0.5">
-          <p className="font-mono text-[10px] text-slate-400 tracking-widest uppercase">
-            *** Wholesale Market Yard ***
+        <div className="pt-3 border-t border-slate-200/80 text-center space-y-0.5">
+          <p className="font-extrabold text-[9.5px] uppercase tracking-widest text-slate-600">
+            OFFICIAL APMC MANDI SALE PARCHI • FORM C • GOVT REGULATED
           </p>
-          <p className="text-[9px] text-slate-400">
-            Printed via भारत MANDI
+          <p className="text-[9px] font-medium text-slate-400">
+            Generated via Bharat MANDI Software • Valid Settlement Bill
           </p>
         </div>
       </div>

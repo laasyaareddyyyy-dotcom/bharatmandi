@@ -180,14 +180,14 @@ export const COMMODITY_CONFIGS: Record<CommodityCategory, CommodityCategoryMeta>
 
 export const ALL_COMMODITIES: CommodityCategory[] = ['flowers', 'grains', 'vegetables', 'fruits', 'spices'];
 
-export const DEFAULT_MARKET_YARD_NAME = 'Wholesale Market Yard';
+export const DEFAULT_MARKET_YARD_NAME = '';
 
 export const initialMerchantProfile: MerchantProfile = {
-  shopName: "Mandi Wholesale Merchant",
-  ownerName: "Mandi Trader",
+  shopName: "Bharat Mandi",
+  ownerName: "",
   photoUrl: "",
-  shopNumber: "Shop No. 1",
-  marketYardName: "Wholesale Market Yard",
+  shopNumber: "1",
+  marketYardName: "",
   merchantId: "MND-1001",
   phoneNumber: "+91 9849012345",
   licenseNumber: "Verified Adathiya",
@@ -201,7 +201,7 @@ export const initialMerchantProfile: MerchantProfile = {
     fruits: { defaultCommissionRate: 6, defaultHamaliRate: 45, defaultTransportRate: 90, defaultStorageRate: 25 },
     spices: { defaultCommissionRate: 3, defaultHamaliRate: 40, defaultTransportRate: 100, defaultStorageRate: 25 },
   },
-  address: "Wholesale Market Yard"
+  address: "Shop No. 1"
 };
 
 export const initialFarmers: Farmer[] = [];

@@ -127,22 +127,43 @@ export function buildFormCData(options: BuildFormCOptions): FormCData {
   } = options;
 
   // 1. Resolve Shop Profile
-  const resolvedYard = merchantProfile.marketYardName?.trim() || 'Wholesale Market Yard';
-  const resolvedAddress =
-    merchantProfile.address?.trim() ||
-    `${merchantProfile.shopNumber ? `Shop No. ${merchantProfile.shopNumber} • ` : ''}${resolvedYard}`;
+  const rawShop = (merchantProfile.shopName || '')
+    .replace(/\bMandi Wholesale Merchant\b/gi, '')
+    .replace(/\bWholesale Market Yard\b/gi, '')
+    .trim();
+  const shopNameStr = rawShop && rawShop.toLowerCase() !== 'mandi wholesale merchant' ? rawShop.toUpperCase() : 'BHARAT MANDI';
+
+  const rawYard = (merchantProfile.marketYardName || '')
+    .replace(/\bWholesale Market Yard\b/gi, '')
+    .trim();
+
+  const rawAddr = (merchantProfile.address || '')
+    .replace(/\bWholesale Market Yard\b/gi, '')
+    .trim();
+
+  const resolvedAddress = rawAddr
+    ? rawAddr
+    : rawYard
+    ? `${merchantProfile.shopNumber ? `Shop No. ${merchantProfile.shopNumber} • ` : ''}${rawYard}`
+    : merchantProfile.shopNumber
+    ? `Shop No. ${merchantProfile.shopNumber}`
+    : '';
+
+  const rawOwner = (merchantProfile.ownerName || '')
+    .replace(/\bMandi Trader\b/gi, '')
+    .trim();
 
   const shopSnapshot: FormCShopProfileSnapshot = {
-    shopName: (merchantProfile.shopName || 'MANDI WHOLESALE MERCHANT').toUpperCase(),
+    shopName: shopNameStr,
     shopNumber: merchantProfile.shopNumber || '1',
-    marketYardName: resolvedYard,
+    marketYardName: rawYard,
     address: resolvedAddress,
-    ownerName: merchantProfile.ownerName || 'Mandi Trader',
+    ownerName: rawOwner && rawOwner !== 'Mandi Trader' ? rawOwner : '',
     phoneNumber: merchantProfile.phoneNumber || '+91 9849012345',
     licenseNumber: merchantProfile.licenseNumber?.trim() || undefined,
     gstin: merchantProfile.gstin?.trim() || undefined,
     logoUrl: merchantProfile.logoUrl?.trim() || undefined,
-    signatoryLabel: merchantProfile.signatoryLabel?.trim() || `For ${merchantProfile.shopName || 'Mandi Merchant'}`,
+    signatoryLabel: merchantProfile.signatoryLabel?.trim() || `For ${shopNameStr}`,
   };
 
   // 2. Resolve Farmer Info
@@ -309,7 +330,7 @@ export function buildFormCData(options: BuildFormCOptions): FormCData {
       ? Number(draftData.commissionPercent)
       : lot?.commissionPercent ?? merchantProfile.defaultCommissionRate ?? 4;
 
-  const commissionAmount = Math.round((grossTotal * commissionPercent) / 100);
+  const commissionAmount = Number(((grossTotal * commissionPercent) / 100).toFixed(2));
 
   const miscCommissionMode = customSettings.miscCommissionMode || 'percent';
   const miscCommissionPercent =
@@ -324,17 +345,18 @@ export function buildFormCData(options: BuildFormCOptions): FormCData {
 
   const miscCommissionAmount =
     miscCommissionMode === 'percent'
-      ? Math.round((grossTotal * miscCommissionPercent) / 100)
-      : Number(miscCommissionFixed || 0);
+      ? Number(((grossTotal * miscCommissionPercent) / 100).toFixed(2))
+      : Number(Number(miscCommissionFixed || 0).toFixed(2));
 
   const otherDeductions: FormCDeductionItem[] = customSettings.otherDeductions || [];
 
   const otherDeductionsSum = otherDeductions.reduce((acc, d) => acc + (Number(d.amount) || 0), 0);
 
-  const totalDeductions =
-    transportCharges + ammaliCharges + commissionAmount + miscCommissionAmount + otherDeductionsSum;
+  const totalDeductions = Number(
+    (transportCharges + ammaliCharges + commissionAmount + miscCommissionAmount + otherDeductionsSum).toFixed(2)
+  );
 
-  const farmerNetPayable = Math.max(0, grossTotal - totalDeductions);
+  const farmerNetPayable = Math.max(0, Number((grossTotal - totalDeductions).toFixed(2)));
 
   // 6. Payment & Settlement
   const rawStatus = customSettings.paymentStatus || lot?.paymentStatus || draftData?.paymentStatus || 'Paid';
@@ -350,7 +372,7 @@ export function buildFormCData(options: BuildFormCOptions): FormCData {
       : 0;
 
   const amountPaid = Math.min(farmerNetPayable, Math.max(0, rawAmountPaid));
-  const balanceDue = Math.max(0, farmerNetPayable - amountPaid);
+  const balanceDue = Math.max(0, Number((farmerNetPayable - amountPaid).toFixed(2)));
 
   const paymentStatus: 'Paid' | 'Partial' | 'Unpaid' =
     balanceDue === 0 && amountPaid > 0 ? 'Paid' : amountPaid > 0 ? 'Partial' : 'Unpaid';
@@ -358,14 +380,15 @@ export function buildFormCData(options: BuildFormCOptions): FormCData {
   const paymentMode = customSettings.paymentMode || lot?.paymentMode || draftData?.paymentMode || 'Cash';
   const paymentReference = customSettings.paymentReference || lot?.paymentReference || '';
 
-  // 7. Clean Filename Format: BharatMandi-FormC-{InvoiceNo}-{FarmerName}.pdf
-  const safeFarmerName = sourceName.replace(/[^a-zA-Z0-9]/g, '_');
-  const pdfFileName = `BharatMandi-FormC-${rawParchiNumber}-${safeFarmerName}.pdf`;
+  // 7. Clean Filename Format: FormC-<FARMERCODE>-<DATE>-<N>.pdf
+  const farmerCodePart = (farmerData.farmerCode || farmerData.id || 'GRS').replace(/[^a-zA-Z0-9]/g, '');
+  const serialPart = rawParchiNumber.split('-').pop() || '1';
+  const pdfFileName = `FormC-${farmerCodePart}-${dateStr}-${serialPart}.pdf`;
 
   // 8. Dynamic WhatsApp Text Summary
   const formattedGross = `₹${grossTotal.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   const formattedNet = `₹${farmerNetPayable.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  const whatsappSummaryText = `FORM C MANDI SALE PARCHI | ${shopSnapshot.shopName}\nInvoice: ${rawParchiNumber}\nFarmer: ${farmerData.name} (${farmerData.farmerCode})\nDate: ${dateStr}\nGross Total: ${formattedGross}\nTotal Deductions: ₹${totalDeductions.toLocaleString('en-IN', { minimumFractionDigits: 2 })}\nNet Payable: ${formattedNet}\nStatus: ${paymentStatus.toUpperCase()}`;
+  const whatsappSummaryText = `FORM C MANDI SALE PARCHI | ${shopSnapshot.shopName}\nInvoice: ${rawParchiNumber}\nFarmer: ${farmerData.name} (${farmerData.farmerCode})\nDate: ${dateStr}\nGross Total: ${formattedGross}\nTotal Deductions: ₹${totalDeductions.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}\nNet Payable: ${formattedNet}\nStatus: ${paymentStatus.toUpperCase()}`;
 
   return {
     isPreview,

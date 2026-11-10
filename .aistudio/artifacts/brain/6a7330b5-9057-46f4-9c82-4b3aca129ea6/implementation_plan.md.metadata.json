@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for BHARAT MANDI wholesale commission agent web application, covering exact layouts, screens, parchi generator, Form C PDF invoice generator, and offline data model.",
-  "updatedAt":  "2026-10-27T13:46:29.881805971Z",
+  "summary":  "Implementation plan for A4 Mandi Sale Parchi (Form C) and Farmer Khata Ledger PDF engine using jsPDF & jsPDF-AutoTable with pixel-identical geometry, 8-column commodity tables, WinAnsi-safe currency formatting, hero net payable banners, and live modal preview.",
+  "updatedAt":  "2026-11-10T03:22:17.241787277Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

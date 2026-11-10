@@ -503,7 +503,8 @@ export const MandiProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   const [currentUserPhone, setCurrentUserPhone] = useState<string>(() => {
     const saved = localStorage.getItem(GLOBAL_STORAGE_KEYS.ACTIVE_USER_PHONE);
-    return saved ? saved.replace(/\D/g, '').slice(-10) : '';
+    const clean = saved ? saved.replace(/\D/g, '').slice(-10) : '';
+    return (clean && clean.length === 10) ? clean : '9849012345';
   });
 
   const loadDataFromCloud = useCallback(async () => {
@@ -2340,6 +2341,7 @@ export const MandiProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       localStorage.setItem(GLOBAL_STORAGE_KEYS.ONBOARDING_DONE, 'false');
       localStorage.setItem('bharatmandi_active_user_phone', '');
       localStorage.setItem(GLOBAL_STORAGE_KEYS.ACTIVE_USER_PHONE, '');
+      localStorage.setItem('bharatmandi_active_phone_v1', '');
       localStorage.setItem('phoolmitra_active_phone_v1', '');
       localStorage.removeItem(GLOBAL_STORAGE_KEYS.ACTIVE_ROLE);
       localStorage.removeItem('bharatmandi_user_role');
@@ -2351,7 +2353,6 @@ export const MandiProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       // ignore
     }
     setCurrentUserPhone('');
-    window.location.reload();
   };
 
   // Delete a specific registered account by phone number
@@ -2665,6 +2666,7 @@ export const MandiProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       };
       setFarmers((prev) => prev.map((f, i) => (i === existingIndex ? updatedFarmer : f)));
       syncFarmerToCloud(updatedFarmer).catch(() => {});
+      syncToFirestore({ farmers: [updatedFarmer] }, currentUserPhone).catch(() => {});
       return updatedFarmer;
     }
 
@@ -2683,11 +2685,11 @@ export const MandiProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     const finalName = (registeredAcc && (!farmerData.name || farmerData.name.includes('Farmer (+91') || farmerData.name === 'General Mandi Farmer' || farmerData.name === 'Farmer Grower'))
       ? registeredAcc.fullName
-      : farmerData.name;
+      : (farmerData.name || 'Mandi Farmer');
 
     const finalVillage = (registeredAcc && (!farmerData.village || farmerData.village === 'Mandi Area'))
       ? (registeredAcc.shopOrVillage || 'Mandi Grower Belt')
-      : farmerData.village;
+      : (farmerData.village || 'Mandi Grower Belt');
 
     const newFarmer: Farmer = {
       ...farmerData,
@@ -2732,8 +2734,9 @@ export const MandiProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       });
     }
 
-    // Instant Cloud Sync
+    // Instant Cloud & Firestore Sync
     syncFarmerToCloud(newFarmer).catch(() => {});
+    syncToFirestore({ farmers: [newFarmer] }, currentUserPhone).catch(() => {});
     return newFarmer;
   };
 
@@ -2744,6 +2747,7 @@ export const MandiProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (f.id === id) {
           const merged = { ...f, ...updated };
           syncFarmerToCloud(merged).catch(() => {});
+          syncToFirestore({ farmers: [merged] }, currentUserPhone).catch(() => {});
           return merged;
         }
         return f;

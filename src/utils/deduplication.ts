@@ -37,61 +37,34 @@ export const deduplicateFarmers = (farmers: Farmer[]): Farmer[] => {
   if (!Array.isArray(farmers) || farmers.length === 0) return [];
   const map = new Map<string, Farmer>();
   const phoneToKey = new Map<string, string>();
-  const nameVillageToKey = new Map<string, string>();
 
   for (const f of farmers) {
     if (!f || typeof f !== 'object') continue;
     const cleanId = (f.id || '').trim();
     const cleanPhone = normalizePhone(f.phone);
-    const cleanName = normalizeStr(f.name);
-    const cleanVillage = normalizeStr(f.village);
 
     let key = '';
 
-    // 1. Check if phone already mapped (valid 10-digit non-default phone)
-    if (cleanPhone && cleanPhone.length === 10 && cleanPhone !== '9876543210') {
+    // 1. Check if cleanId already in map
+    if (cleanId && map.has(cleanId)) {
+      key = cleanId;
+    }
+
+    // 2. Check if phone already mapped (valid 10-digit non-default phone)
+    if (!key && cleanPhone && cleanPhone.length === 10 && cleanPhone !== '9876543210') {
       if (phoneToKey.has(cleanPhone)) {
         key = phoneToKey.get(cleanPhone)!;
       }
     }
 
-    // 2. Check if cleanId already in map
-    if (!key && cleanId && map.has(cleanId)) {
-      key = cleanId;
-    }
-
-    // 3. Check if name+village already mapped (only if BOTH name and village are non-empty and non-generic)
-    if (
-      !key &&
-      cleanName &&
-      cleanVillage &&
-      cleanVillage !== 'mandi area' &&
-      cleanVillage !== 'mandi yard' &&
-      cleanVillage !== 'mandi'
-    ) {
-      const nvKey = `${cleanName}_${cleanVillage}`;
-      if (nameVillageToKey.has(nvKey)) {
-        key = nameVillageToKey.get(nvKey)!;
-      }
-    }
-
-    // 4. Fallback to cleanId or new key
+    // 3. Fallback to cleanId or new unique key
     if (!key) {
       key = cleanId || `farmer_${Date.now()}_${Math.random()}`;
     }
 
-    // Register phone and name+village mappings
+    // Register phone mapping
     if (cleanPhone && cleanPhone.length === 10 && cleanPhone !== '9876543210') {
       phoneToKey.set(cleanPhone, key);
-    }
-    if (
-      cleanName &&
-      cleanVillage &&
-      cleanVillage !== 'mandi area' &&
-      cleanVillage !== 'mandi yard' &&
-      cleanVillage !== 'mandi'
-    ) {
-      nameVillageToKey.set(`${cleanName}_${cleanVillage}`, key);
     }
 
     if (map.has(key)) {

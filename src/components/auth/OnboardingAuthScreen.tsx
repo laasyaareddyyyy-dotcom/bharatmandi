@@ -1686,6 +1686,7 @@ export const OnboardingAuthScreen: React.FC<Props> = ({ onComplete }) => {
       localStorage.setItem('bharatmandi_onboarding_completed', 'true');
       localStorage.setItem('bharatmandi_user_role', res.account?.role || 'merchant');
       localStorage.setItem('bharatmandi_active_phone_v1', cleanPhone);
+      localStorage.setItem('bharatmandi_active_user_phone', cleanPhone);
     } catch {}
     console.timeEnd('[LOGIN PERF] 3. Profile & Data Fetch (Local Memory)');
 
@@ -1922,6 +1923,7 @@ export const OnboardingAuthScreen: React.FC<Props> = ({ onComplete }) => {
         localStorage.setItem('bharatmandi_onboarding_completed', 'true');
         localStorage.setItem('bharatmandi_user_role', 'merchant');
         localStorage.setItem('bharatmandi_active_phone_v1', cleanPhone);
+        localStorage.setItem('bharatmandi_active_user_phone', cleanPhone);
         localStorage.setItem('bharatmandi_user_commodities', JSON.stringify(selectedCommodities));
       } catch {}
 

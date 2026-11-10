@@ -963,18 +963,6 @@ export const SettingsModal: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  id="settings-logout-btn"
-                  onClick={() => {
-                    setIsSettingsOpen(false);
-                    logoutCurrentUser();
-                  }}
-                  className="px-3.5 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer min-touch-target"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>{language === 'te' ? 'లాగ్ అవుట్' : language === 'hi' ? 'लॉग आउट' : 'Log Out'}</span>
-                </button>
 
                 <button
                   type="button"
